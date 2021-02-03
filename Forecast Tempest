@@ -1,0 +1,1384 @@
+<?php
+//----------------------------------------Version 3.2.1  Datum 2.02.2021 BestEx/Erpe  --------------------------------
+// Das Skript legt automatisch sieben Variablen an : All Data => ist eine String Variable in der serialisiert das von Tempest empfangene Array mit Daten für den Nutzer abgelegt wird.
+// Das Program nutzt diese Variable nicht
+// Hourly Forecast, sowie Daily Forecast sind die String Variablen die den HTML String zur Anzeige des Forecasts  beinhalten.  Station zeigt die aktuellen Werte der im Moment exisitierenden Verhältnisse an 
+// Token und Station ID speichert die Zugangs Daten
+// in der String variablen Icons werden beim ersten Durchlauf die externen default Icons geladen und lokal in der variable gespeichert
+
+
+// Hier bitte die entsprechenden Daten eintragen
+set_time_limit(60); 
+
+// Um das ständige Neueintragen des Tokens und der Station ID bei updates zu vermeiden genügt es in Zukunft diese Daten nur einmal anzugeben. Das Skript speichert die Daten in zwei Variablen ab. Danach kann die Eingabe leer '' bleiben.
+$token = '';
+$Station_ID = '';
+
+// Es gibt die folgenden Konfigurations  Modis : 
+//                      "Save"  : Konfigurationsdaten  type werden in dem Skript "Configurations" abgespeichert. Es können mehrere Versionen der Konfigurations Daten abgelegt werden. 
+//    
+//                       ""     : Konfigurations Daten wie im Skript eingetragen werden genutzt
+//                       "Use" : Konfigurations Daten werden aus dem Configurations Skript geladen und genutzt
+//                       "List" : Zeigt die Namen der gespeicherten Konfigurationen 
+//                       "Detail" : zeigt die details der spezifischen Konfiguration
+//                       "Compare" : Vergleicht die Konfiguration im Skript mit der gespeicherten Konfiguration. Es werden nur fehlende Felder in der gespeicherten Konfiguration angezeigt
+//                       "Delete"  : Löscht ein Konfigurations Backup
+//                        "Migrate" : Mit diesem Befehl werden die  früher in der String Variablen gesicherten Konfigurationen in das Configurations Skript übertragen, Daten die sich bereits im Configurationsskripe befinden werden gelöscht
+//                       
+
+// Änderungen der Daten Inhalte (Parameter) sowie der Datenstruktur bitte direkt im Configuartions Skript durchführen, ACHTUNG Array Struktur conventionen  beachten. Der Befehl "Add" wurde entfernt 
+
+
+$configuration_back_up_command = ""; 
+$config_name = "Standart"; // Name der Konfiguration
+
+
+
+//                                                   Bei zukünftigen Felderweiterungen werden die erweiterungen mitgeliefert und erlauben eine Migration alter Configurationsdaten in die aktuelle Version
+
+
+//-------------------------------------------Parameter um die Anzeige zu personalisieren-------------------------------
+
+$path = 'https://cdn.jsdelivr.net/gh/YR/weather-symbols@8.0.1/dist/svg/'; // Pfad für die Wetter Symbole
+$icon_type = '.svg';// Typ des ICONS. Im Moment funktionieren nur ICONS vom Typ SVG !
+
+// In diesem Array die Dateinamen der ICONS eigenen ICONS eintragen falls solche gewünscht sind
+$condition_icons = array(
+
+'clear-day' => '',
+'clear-night' => '',
+'cloudy' => '',
+'foggy' => '',
+'partly-cloudy-day' => '',
+'partly-cloudy-night' => '',
+'possibly-rainy-day' => '',
+'possibly-rainy-night' => '',
+'possibly-sleet-day' => '',
+'possibly-sleet-night' => '',
+'possibly-snow-day' => '',
+'possibly-snow-night' => '',
+'possibly-thunderstorm-day' => '',
+'possibly-thunderstorm-night' => '',
+'rainy' => '',
+'sleet' => '',
+'snow' => '',
+'thunderstorm' => '',
+'windy' => ''
+
+);
+
+$time_lapsed = true; // Blitz Anzeige bei True wird die vergangene Zeit seit dem letzten Blitz angezeigt, bei false das Datum
+
+$data_divider = ' │ '; // Trennzeichen falls mehrere Datenfelder in einer Zeile angezeigt werden (merge)
+
+$default_icons = true; // Falls eigene ICONS verwendet werden sollen  auf false setzen
+
+// Transparenz Werte 
+$alpha = '33'; // Transparenzwert für den Hintergrund
+$alpha_text = ''; // Transparenzwert für den Text 
+$alpha_label = '80'; // Transparenzwert für den Text der Label
+$alpha_border = '0F';// Transparenzwert für die Umrandung der Tabellenfelder
+$alpha_border1 = '1F';// Transparenzwert für die Umrandung der Tabellenfelder
+//  HEX Farbfelder. Weitere Farben können als HEX  beliebig hinzugefügt werden 
+$blue = '5ba2ec';
+$white = 'FFFFFF' ;
+$light_blue = '80d7ff';
+$light_green = '90EE90';
+$dark_grey = 'A9A9A9';
+$light_grey = 'D3D3D3';
+$red = 'FF2626';
+$yellow = 'DFDF00';
+$green = '2DC800';
+$orange = 'FFC895';
+$blood_orange = 'FF6666';
+$fire = 'FF3300';
+$black = '000000';
+$violet = '774477';
+
+// Zuordnung der Farben und der Alpha Einstellung  zu den Feldern der Anzeige 
+
+ 
+
+$type['hours']['color_label_background'] = $blue.$alpha_label; 
+$type['days']['color_label_background'] = $blue.$alpha_label; 
+$type['now']['color_label_background'] = $blue.$alpha_label; 
+
+
+$type['hours']['color_text_label'] =$white.$alpha_text;
+$type['days']['color_text_label'] =$white.$alpha_text;
+$type['now']['color_text_label'] =$white.$alpha_text;
+
+
+$type['hours']['color_column_text'] = $white.$alpha_text;
+$type['days']['color_column_text'] = $white.$alpha_text;
+$type['now']['color_column_text'] = $white.$alpha_text;
+
+
+$type['hours']['color_column_background'] = $blue.$alpha; 
+$type['days']['color_column_background'] = $blue.$alpha; 
+$type['now']['color_column_background'] = $blue.$alpha; 
+
+$type['hours']['border_color'] = $light_blue.$alpha_border;
+$type['days']['border_color']  = $light_blue.$alpha_border;
+$type['now']['border_color']  = $light_blue.$alpha_border1;
+
+// Ein paar Schalter zum Spielen
+
+$type['hours']['border'] = 'collapse'; // Werte können 'collapse' oder 'separate' sein
+$type['days']['border'] = 'collapse';
+$type['now']['border'] = 'collapse';
+
+$type['hours']['nr_of_forecasts'] = 200; //max 240
+$type['days']['nr_of_forecasts']  = 10; //max 10
+$type['now']['nr_of_forecasts']  = 1; //
+
+$type['hours']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
+$type['days']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
+$type['now']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
+
+$type['hours']['table_layout'] = 'fixed'; // 'fixed' 'auto'
+$type['days']['table_layout']  = 'fixed'; // 'fixed' 'auto'
+$type['now']['table_layout']  = 'fixed'; // 'fixed' 'auto'
+
+
+$type['hours']['tabellen_breite_in_przt'] = true;  // True bzw false 
+$type['days']['tabellen_breite_in_przt'] = true;  // True bzw false 
+$type['now']['tabellen_breite_in_przt']  = true;  // True bzw false 
+
+$type['hours']['width'] = 4100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
+$type['days']['width'] = 225; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
+$type['now']['width'] =  100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
+
+
+$type['hours']['fontSize'] = 1.5; //Schriftgröße in px
+$type['days']['fontSize'] = 1.5; //Schriftgröße in px
+$type['now']['fontSize'] =  3; //Schriftgröße in px
+
+$type['hours']['font_size_scale_type'] = 'vw';//vw,px
+$type['days']['font_size_scale_type'] = 'vw';
+$type['now']['font_size_scale_type'] = 'vw';
+
+
+$type['hours']['wrap_label'] = "nowrap";  // Zeilenumbruch wird verhindert wenn "nowrap" erlaubt bei ""
+$type['days']['wrap_label'] = "nowrap";
+$type['now']['wrap_label'] = "nowrap";
+
+$type['hours']['wrap_column'] = "nowrap";
+$type['days']['wrap_column'] = "nowrap";
+$type['now']['wrap_column'] = "nowrap";
+
+$type['hours']['border_size'] = 1; // in px
+$type['days']['border_size']  = 1; // in px
+$type['now']['border_size']  = 1; // in px
+
+
+$type['hours']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
+$type['days']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
+$type['now']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
+
+$type['hours']['language'] = 'German'; // 'German', 'English'
+$type['days']['language'] = 'German';
+$type['now']['language'] = 'German';
+
+
+$type['hours']['icon_height'] = 40;
+$type['hours']['icon_width'] = 40;
+$type['days']['icon_height']  = 40;
+$type['days']['icon_width']= 40;
+$type['now']['icon_height']  = 25;
+$type['now']['icon_width'] = 25;
+
+
+$type['hours']['selector'] = 'time'; 
+$type['days']['selector'] = 'day_start_local';
+$type['now']['selector'] = 'time';
+
+$type['hours']['type'] = 'hourly'; 
+$type['days']['type'] = 'daily';
+$type['now']['type'] = 'current_conditions';
+
+$type['hours']['dataset_id'] = ''; 
+$type['days']['dataset_id'] = '';
+$type['now']['dataset_id'] = '';
+
+
+$type['hours']['VAR_Name'] = 'Hourly Forecast'; 
+$type['days']['VAR_Name'] = 'Daily Forecast';
+$type['now']['VAR_Name'] = 'Station';
+
+
+// Parameter (Reihenfolge der Anzeige, Zeile Aktiviert bzw. deaktiviert, Text in English und Deutsch, Text Zusatz) für die Stunden Vorhersage 
+$type['hours']['parameter'] = array(
+            'time' => array(
+                              'German' => 'Zeit',
+                              'English' => 'Time',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''),                           
+                              'Merge with' => array("","")
+                              ),
+            'local_day' => array(
+                              'German' => 'Datum',
+                              'English' => 'Date',
+                              'Active' => true,                         
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'local_hour' => array(
+                              'German' => 'Stunde',
+                              'English' => 'Hour',
+                              'Active' => true,
+                              'Suffix' => array('default' => ':00','merge' =>''),                           
+                              'Merge with' => array("","")
+                              ), 
+            'icon' => array(
+                              'German' => '',
+                              'English' => '',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'conditions' => array(
+                              'German' => 'Wetterlage',
+                              'English' => 'Condtion',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''),  
+                              'Merge with' => array("","")
+                              ),
+            'precip' => array(
+                              'German' => 'möglicher Niederschlag',
+                              'English' => 'Precip(mm)',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' mm','merge' =>''),    
+                              'Merge with' => array('precip_probability',"")
+                              ),
+            'precip_probability' => array(
+                              'German' => 'Möglich',
+                              'English' => 'Probability',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' %','merge' =>' %'),    
+                              'Merge with' => array("","")
+                              ), 
+
+            'air_temperature' => array(
+                              'German' => 'Temperatur',
+                              'English' => 'Temp.',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' °C','merge' =>' °C'),                               
+                              'Merge with' => array('feels_like',"")
+                              ), 
+            'feels_like' => array(
+                              'German' => 'Temp gefühlt/gemessen',
+                              'English' => 'TF / TA',
+                              'Active' => true,                              
+                              'Suffix' => array('default' =>  '','merge' =>''),    
+                              'Merge with' => array('air_temperature',"")
+                              ), 
+            'relative_humidity' => array(
+                              'German' => 'Feuchte',
+                              'English' => 'Humidity',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' %','merge' =>''),    
+                              'Merge with' => array("","")
+                              ),
+            'sea_level_pressure' => array(
+                              'German' => 'Luftdruck NN',
+                              'English' => 'Pres.',
+                              'Active' => true,
+                              'Suffix' => array('default' => ' hPa','merge' =>''), 
+                              'Merge with' => array("","")
+                              ), 
+            'wind_avg' => array(
+                              'German' => 'Wind ~',
+                              'English' => 'Wind ~',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' km/h','merge' =>''),    
+                              'Merge with' => array("","")
+                              ), 
+            'wind_direction' => array(
+                              'German' => 'Richtung',
+                              'English' => 'Direction',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ), 
+            'wind_direction_cardinal' => array(
+                              'German' => 'Wind Richtung/~/Böe',
+                              'English' => 'Di/Avg/Gust',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array('wind_avg','wind_gust')
+                              ), 
+            'wind_gust' => array(
+                              'German' => 'Böe',
+                              'English' => 'Gust',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' km/h','merge' =>' km/h'),    
+                              'Merge with' => array("","")
+                              ), 
+            'uv' => array(
+                              'German' => 'UV',
+                              'English' => 'UV',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              )
+);
+
+
+$type['days']['parameter']  = array(
+            'day_start_local' => array(
+                              'German' => 'Datum',
+                              'English' => 'Date',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'day_num' => array(
+                              'German' => 'Tag',
+                              'English' => 'Day',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'month_num' => array(
+                              'German' => 'Monat',
+                              'English' => 'Month',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'icon' => array(
+                              'German' => '',
+                              'English' => '',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'conditions' => array(
+                              'German' => 'Wetterlage',
+                              'English' => 'Condition',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'air_temp_high' => array(
+                              'German' => 'Temp.Max',
+                              'English' => 'Temp.Max',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' °C','merge' =>' °C'),   
+                              'Merge with' => array("","")
+                              ),
+            'air_temp_low' => array(
+                              'German' => 'Temp. Min/Max',
+                              'English' => 'T.Min-Max',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  '','merge' =>' °C'),   
+                              'Merge with' => array('air_temp_high',"")
+                              ),
+           'precip_icon' => array(
+                              'German' => '',
+                              'English' => '',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'precip_type' => array(
+                              'German' => 'Niederschlags Art',
+                              'English' => 'Precip',
+                              'Active' => true,
+                              'Suffix' => array('default' => ' ','merge' =>' %'), 
+                              'Merge with' => array("precip_probability","")
+                              ),
+            'precip_probability' => array(
+                              'German' => 'Niederschlags Art',
+                              'English' => 'Precip',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' %','merge' => '%'),   
+                              'Merge with' => array('precip_type',"")
+                              ),
+            'sunrise' => array(
+                              'German' => 'Tageslicht',
+                              'English' => 'Daylight',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'sunset' => array(
+                              'German' => 'Tageslicht',
+                              'English' => 'Daylight',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              )
+           );
+
+
+$type['now']['parameter']  = array(
+            'time' => array(
+                              'German' => 'Zeit',
+                              'English' => 'Time',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+            'icon' => array(
+                              'German' => '',
+                              'English' => '',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+ 
+           'conditions' => array(
+                              'German' => 'Wetterlage',
+                              'English' => 'Condition',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+             'air_temperature' => array(
+                              'German' => 'Temp.',
+                              'English' => 'Temp.',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  '','merge' => ' °C'),
+                              'Merge with' => array("","")
+                              ),
+           'feels_like' => array(
+                              'German' => 'Temp Gefühlt/Gemessen',
+                              'English' => 'TF / TA',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' ','merge' =>''),
+                              'Merge with' => array("air_temperature","")
+                              ), 
+          'dew_point' => array(
+                              'German' => 'Taup./Kühlgrenze/Delta T/Temp',
+                              'English' => 'DP/WBT/WBD/~T',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  '','merge' =>''),
+                              'Merge with' => array("wet_bulb_temperature","delta_t","air_temperature")
+                              ),
+           'wet_bulb_temperature' => array(
+                              'German' => 'Feuchteterm. T.',
+                              'English' => 'Wet Bulb Temp.',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' °C','merge' =>''),
+                              'Merge with' => array("","")
+                              ),
+           'delta_t' => array(
+                              'German' => 'Wet Bulb depression',
+                              'English' => 'Wet Bulb depression',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' °C','merge' =>''),
+                              'Merge with' => array("","")
+                              ),
+
+ 
+           'sea_level_pressure' => array(
+                              'German' => 'Luftdruck NN + Trend',
+                              'English' => 'Presssure SL',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' hPa','merge' =>''),
+                              'Merge with' => array("pressure_trend","")
+                              ), 
+           'station_pressure' => array(
+                              'German' => 'Luftdruck Station + Trend',
+                              'English' => 'Presssure Station',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' hPa','merge' =>''),
+                              'Merge with' => array("pressure_trend","")
+                              ), 
+
+
+            'pressure_trend' => array(
+                              'German' => 'Trend',
+                              'English' => 'Trend',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>' '), 
+                              'Merge with' => array("","")
+                              ),
+           'relative_humidity' => array(
+                              'German' => 'Feuchte',
+                              'English' => 'Humidity',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' %','merge' =>''),
+                              'Merge with' => array("","")
+                              ),
+           'wind_avg' => array(
+                              'German' => 'Wind ~',
+                              'English' => 'Wind ~',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' km/h','merge' =>''),
+                              'Merge with' => array("","")
+                              ), 
+            'wind_direction' => array(
+                              'German' => 'Richtung',
+                              'English' => 'Direction',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ), 
+            'wind_direction_cardinal' => array(
+                              'German' => 'Wind Richtung/~/Böe',
+                              'English' => 'Di/~/Gust',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>' km/h'), 
+                              'Merge with' => array("wind_avg","wind_gust")
+                              ), 
+            'wind_gust' => array(
+                              'German' => 'Böe',
+                              'English' => 'Gust',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' km/h','merge' =>' km/h'),
+                              'Merge with' => array("","")
+                              ), 
+
+           'solar_radiation' => array(
+                              'German' => 'Solar Strahlung/Helligkeit/UV',
+                              'English' => 'Solar Radiation',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' W/m²','merge' =>''),
+                              'Merge with' => array("brightness","uv")
+                              ),
+            'uv' => array(
+                              'German' => 'UV',
+                              'English' => 'UV',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>' '), 
+                              'Merge with' => array("","")
+                              ),
+
+           'brightness' => array(
+                              'German' => 'Helligkeit',
+                              'English' => 'Brightness',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' Lx','merge' =>' Lx'),
+                              'Merge with' => array("","")
+                              ),
+            'air_density' => array(
+                              'German' => 'Luftdichte',
+                              'English' => 'Air Density',
+                              'Active' => true,
+                              'Suffix' => array('default' =>   ' kg/m³','merge' =>''),
+                              'Merge with' => array("","")
+                              ),
+           'lightning_strike_count_last_1hr' => array(
+                              'German' => '# Blitze 1+3 St.+Entfernung',
+                              'English' => 'Lightning 1+3Hr+Dist.',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("lightning_strike_count_last_3hr",'lightning_strike_last_distance_msg')
+                              ),
+           'lightning_strike_count_last_3hr' => array(
+                              'German' => '# Blitze letzte 3 Stunden',
+                              'English' => '# Lightnings < 3 H.',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+          'lightning_strike_last_distance' => array(
+                              'German' => 'Entfernung letzter Blitz',
+                              'English' => 'Distance last Lightning',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>' km'), 
+                              'Merge with' => array("","")
+                              ),
+          'lightning_strike_last_distance_msg' => array(
+                              'German' => 'Entfernung letzter Blitz + Zeit',
+                              'English' => 'Distance last Lightning + Time',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+          'lightning_strike_last_epoch' => array(
+                              'German' => 'Zeitpunkt letzter Blitz',
+                              'English' => 'Time last Lightning',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+
+            'precip_accum_local_day' => array(
+                              'German' => 'Niederschlag Heute',
+                              'English' => 'Precip Today',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' mm','merge' =>' mm'),
+                              'Merge with' => array("","")
+                              ),
+           'precip_minutes_local_day' => array(
+                              'German' => 'Dauer Niederschlag Heute',
+                              'English' => 'Duration Precip Today',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  '','merge' =>' Min.'),
+                              'Merge with' => array("","")
+                              ),                            
+         'precip_accum_local_yesterday' => array(
+                              'German' => 'Menge Nieders. Gestern/Heute',
+                              'English' => 'Precip t-1,t',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  '','merge' =>''),
+                              'Merge with' => array("precip_accum_local_day","")
+                              ),                            
+           'precip_minutes_local_yesterday' => array(
+                              'German' => "Dauer Nieders. Gestern/Heute",
+                              'English' => 'Rain t-1,t',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  '','merge' =>''),
+                              'Merge with' => array("","precip_minutes_local_day")
+                              ),
+           'is_precip_local_day_rain_check' => array(
+                              'German' => 'Hat es geregnet ?',
+                              'English' => 'Did it Rain ?',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+           'is_precip_local_yesterday_rain_check' => array(
+                              'German' => 'Hat es gestern geregnet ?',
+                              'English' => 'Did it Rain yesterday ?',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+  
+
+  
+
+
+
+);
+
+
+
+
+//------------------------------ Ab hier bitte nichts mehr verändern ----------------------------------------------------
+
+$icons = NULL;
+static_data($default_icons,$variable_types,$condition_icons,$icons);
+$type = configuration_back_up_handler($configuration_back_up_command,$config_name,$type);
+if($type === false) return;
+
+//print_r($type);
+
+foreach($type as $key => $value)
+{
+      if($value['tabellen_breite_in_przt']) $type[$key]['przt'] = '%'; else  $type[$key]['przt']  ='';
+}
+
+
+//------------------------------------------------------Statische und dynamsiche Daten besorgen ---------------------------------------
+
+$token = check_secret($token,'Token');
+$Station_ID = check_secret($Station_ID,'Station ID');
+if(!$token or !$Station_ID) return;
+$array = get_data($Station_ID,$token);
+//print_r($array);
+
+//-----------------------------------------------------Abspeichern des gesamten Tempest Datensatzes --------------------
+$string_data = serialize($array); 
+$ID = manage_variable(false,$_IPS['SELF'],'All Data',$variable_types['String'],'~TextBox','0',false,true);
+SetValueString($ID,$string_data);
+
+//------------------------------------------------Generiere Tabellen -------------------------------------
+
+foreach($type as $key => $value) // hours, days, now
+{ 
+      $label_background = '<td style="background-color: #'.$value['color_label_background'].'" colspan="1" '.$value['wrap_label'].'>';
+     // $label_background = '<td style="background-color: #'.$value['color_label_background'].'" colspan="1" ';
+      $column_background = '<td style="background-color: #'.$value['color_column_background'].'" colspan="1" '.$value['wrap_column'].'>';
+      $label_text_color = '<FONT COLOR="#'.$value['color_text_label'].'">';
+      $column_text_color = '<FONT COLOR="#'.$value['color_column_text'].'">';
+      build_html_page($value['VAR_Name'],$value['type'],$array,$value['nr_of_forecasts'],$value['intervall'],$value['selector'],$value['width'],$value['przt'],$value['border'],$value['border_size'],$value['border_color'],$value['fontSize'],$value['text_align'],$value['table_layout'],$value['language'],$value['icon_width'],$value['icon_height'],$value['parameter'],$label_background,$column_background,$value['font_size_scale_type']);
+}
+
+
+function configuration_back_up_handler($configuration_back_up_command,$config_name,$configuration)
+{
+      Global $variable_types;
+      $set1 = ['Use','List',"Detail",'Compare',"Delete","Migrate"];
+      if($configuration_back_up_command == 'Save' and $config_name != '')
+      {
+            $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
+            $config_data = json_decode(IPS_GetScriptContent($script_id),true);
+            if(is_array($config_data))
+            { 
+            }
+            else
+            {
+                  $config_data = NULL;
+            }
+            $config_data[$config_name] = $configuration;
+            IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+            echo "Configuration ".$config_name." stored ";
+            return $configuration;
+
+      }
+      elseif($configuration_back_up_command == 'Migrate')
+      {
+            $ID = manage_variable(false,$_IPS['SELF'],'Configurations',$variable_types['String'],'~TextBox','0',false,true);
+            if (GetValueString($ID) != '')
+            {
+                  $config_data = unserialize(GetValueString($ID));
+                  if(is_array($config_data))
+                  {
+                        $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
+                        IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+                        echo " Data from the serialized Variable stored in the Configuration Skript ";
+                        return $configuration;
+                  }
+                  else
+                  {
+                        echo " No Array in Serialized Variable found ";
+                        return false;
+                  }
+            }
+            else
+            {
+                  echo " No Data in Serialized Variable found ";
+                  return false;
+            }
+      }
+      elseif(in_array($configuration_back_up_command,$set1))
+      {
+            $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
+            $config_data = json_decode(IPS_GetScriptContent($script_id),true);
+            if(is_array($config_data))
+            { 
+                  if($configuration_back_up_command == 'List')
+                  {  
+                        echo "The following Configurations are stored : \n";
+                        foreach($config_data as $key => $value)
+                        {
+                              echo $key."\n"; 
+                        }
+                        return false;
+                  }
+                  else
+                  {
+                        if(array_key_exists($config_name,$config_data))
+                        {
+                              if ($configuration_back_up_command == 'Detail')
+                              {   
+                                    echo "Configuration ".$config_name." has the following details : \n";
+                                    print_r($config_data[$config_name]);
+                                    return false;
+                              }
+                              elseif($configuration_back_up_command =='Compare')
+                              {
+                                    echo "Difference between Skript Configuration and ".$config_name." : \n";
+                                    check($configuration,$config_data[$config_name]);
+                                    return false;
+                              }
+                              elseif($configuration_back_up_command == 'Use')
+                              {     echo "Backup Configuration ".$config_name." Used \n";
+                                    return  $config_data[$config_name];                                  
+                              }
+                              elseif($configuration_back_up_command == 'Delete')
+                              { 
+                                    $ID = get_script_id($_IPS['SELF'],'Configurations'); 
+                                    $config_data = json_decode(IPS_GetScriptContent($script_id),true);
+                                    if (is_array($config_data))
+                                    {
+                                          echo "Backup Configuration ".$config_name." deleted \n";
+                                          if(array_key_exists($config_name,$config_data))
+                                          { 
+                                                unset($config_data[$config_name]);   
+                                                IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+                                          }
+                                          else
+                                          {
+                                                echo "Backup Configuration ".$config_name." not found \n";  
+                                          }
+                                          }
+                                    else
+                                    {
+                                          echo "Backup Configuration ".$config_name." not found \n";
+                                    }
+                                    return false;                              
+                              }
+ 
+  
+                              else
+                              {
+                                    echo " Option ".$configuration_back_up_command." not available \n";
+                                    return false;
+                              }
+                        }
+                        else
+                        {
+                             echo " No Configuration stored Yet  \n";
+                             return false;
+                        }
+                  }
+            }
+            else
+            {
+                  echo " No Configuration stored Yet  \n";
+                  return false;
+                 
+            }
+                    
+      }
+      elseif($configuration_back_up_command == '')
+      {
+            echo " Program executed using existing Configuration \n";
+            return $configuration;
+      }
+      else
+      {
+            if($config_name == '')
+            {
+                  echo " Name empty Configuration not Stored \n ";  
+                  return false;   
+            }
+            else
+            {
+                  echo " Option ".$configuration_back_up_command." not available \n";
+                  return false;
+            }
+
+      }
+}
+
+
+
+
+
+
+function build_html_page($var_name,$type, $array, $nr_of_forecasts, $intervall,$selector,$width,$przt,$border,$border_size,$border_color,$fontSize,$text_align,$table_layout,$language,$icon_width,$icon_height,$parameter,$label_background,$column_background,$font_size_scale_type)
+{ 
+      Global $variable_types;
+      //--------------------------------Aufbereitung der Rohdaten für die Stundenvorhersage-----------------------------------
+      if ($type != 'current_conditions') 
+      {
+            $condition = get_detailed_data($type,$array,$nr_of_forecasts,$intervall,$selector);
+      }
+      else
+      {
+            $condition = get_station_data($array,'time');
+      }
+      $content = format_content($type,$width,$przt,$border,$border_size,$border_color,$fontSize,$text_align,$table_layout,$font_size_scale_type);
+      $content .= '<table class="Forecast_Profile_'.$type.'">'; // moved from format_content function
+
+      //---------------------------------Tabelle wird generiert---------------------------------------------------------------
+      foreach($parameter as $key => $value)
+      {     //print_r($value['Suffix']);
+            if($value['Active']) $content = build_content($content,$value[$language],$condition,$key,$value['Suffix'],$value['Merge with'],$icon_width,$icon_height,$parameter,$language,$label_background,$column_background);
+      }
+      $content .= '</table>';
+      //--------------------------------Fertige Tabelle wird als HTML/String Datei gespeichert-------------------------------
+      $ID = manage_variable(false,$_IPS['SELF'],$var_name,$variable_types['String'],'~HTMLBox','0',false,false);
+      SetValueString($ID,$content);
+      // ------------------------------------Ende der Stunden Vorhersage----------------------------------------------
+}
+
+function check_secret($data,$type)
+{     Global $variable_types;
+      if($data == "")
+      {
+            $ID = manage_variable(false,$_IPS['SELF'],$type,$variable_types['String'],'~TextBox','0',false,true);      
+            $data = GetValueString($ID);
+            if($data == '')
+            {
+                  echo $type." fehlt und ist auch nicht gespeichert. Bitte mindestens einmal eingeben";
+                  return false;
+            }
+            return $data;
+      }
+      $ID = manage_variable(false,$_IPS['SELF'],$type,$variable_types['String'],'~TextBox','0',false,true);
+      SetValueString($ID,$data);
+      return $data;
+}
+
+function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$icon_width,$icon_height,$parameter,$language,$label_background,$column_background)
+{ 
+      Global $label_text_color,$condition_icons,$path,$icon_type,$column_text_color,$icons,$default_icons,$data_divider,$array;
+      $content .= '<tr>'; //add
+      $content .= $label_background.$label_text_color.$label_text.'</td>'; //add </td>
+      $nr = 0;
+      foreach($condition as $key => $value)
+      {
+            if($field == 'local_day')
+            { 
+                  if( 
+                        ($value['local_hour'] == '0:00') 
+                        or
+                        ($nr == 0)
+                     )
+                  { 
+                        $content .= $label_background.$label_text_color.$value[$field]; 
+                  }
+                  else 
+                  {
+                        $content .= $label_background.$label_text_color.' ';        
+                  }
+            }
+            elseif($field == 'local_hour')
+            {
+                $content .= $label_background.$label_text_color.$value[$field].$suffix['default'];  
+            }
+            elseif($field == 'icon')
+            {
+                  if($default_icons)
+                  {     
+                        $icon = "<img src='data:image/svg+xml;base64,".base64_encode ($icons[$value['icon']])."' width='" .$icon_width."' height='" .$icon_height."'>";
+                  }
+                  else
+                  {
+                        $filename = $path.$condition_icons[$value['icon']].$icon_type;
+                        $icon =  file_get_contents($filename); 
+                  }
+                  $content .= $label_background.$label_text_color.$icon; 
+            }
+            elseif($field == 'day_start_local')
+            {
+                  if($language == 'German') $content .= $label_background.$label_text_color.strftime("%a %e",$key).$suffix['default']; else $content .= $label_background.$label_text_color.date("D d",$key).$suffix['default']; 
+            }
+            elseif($field == 'sunrise')
+            {
+                  $content .= $column_background.$column_text_color.date("H:i",$value['sunrise']).' - '.date("H:i",$value['sunset']);    
+            }
+            elseif($field == 'time')
+            {
+                  $content .= $label_background.$label_text_color.date("H:i",$key).$suffix['default']; 
+            }
+            else
+            {
+                  if(array_key_exists($field,$value))
+                  { 
+                        $data = translations(strval($value[$field])).$suffix['default'];
+                        foreach($merge as $key1 => $value1) 
+                        {      
+                              if($value1 != '')
+                              {
+                                    if(array_key_exists($value1,$value))
+                                    { 
+                                          $data .= $data_divider.translations($value[$value1]).$parameter[$value1]['Suffix']['merge'];
+                                    }
+                                    else
+                                    {
+
+                                    } 
+                              }
+                              else
+                              {                              
+                              } 
+                        }
+                        $content .= $column_background.$column_text_color.$data;  
+                  }
+                  else
+                  {
+                        $content .= $column_background.$column_text_color;  
+                  }        
+            }
+            $nr++;
+            $content .= '</td>';
+      }
+      $content .= '</tr>';
+      return $content;
+}
+
+function format_content($table_type,$width,$przt,$border,$border_size,$border_color,$fontSize,$text_align,$table_layout,$font_size_scale_type) //add Table Type
+{ 
+      $content = "<meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>"; 
+      $content  .= '<style type="text/css">table.Forecast_Profile_'.$table_type.' {table-layout: '.$table_layout.'; width: '.$width.$przt.';  border-collapse: '.$border.'; } table.Forecast_Profile_'.$table_type.' td { border: '.$border_size.'px solid #'.$border_color.'; font-size: '.$fontSize.$font_size_scale_type.'; text-align: '.$text_align.'; } </style>';
+
+      return $content;
+}
+
+function get_detailed_data($field,$array,$nr_of_forecasts,$intervall,$index)
+{ 
+
+      $key = 0;
+      $nr = 0;
+      while($key < count($array['forecast'][$field]))
+      {
+            if($nr >= $nr_of_forecasts) break;
+            $value = $array['forecast'][$field][$key];
+            foreach($value as $key1 => $value1)
+            {
+                  $condition[$value[$index]][$key1] =  $value1;
+            }
+            $key = $key + $intervall;
+            $nr++;
+      }
+      return $condition;
+}
+
+function get_station_data($array,$index)
+{ 
+
+
+      foreach($array['current_conditions'] as $key => $value)
+      {
+            $condition[time()][$key] =  $value;
+      }
+      return $condition;
+}
+
+function translations($translate_to)
+{
+Global $German;
+     $translate_to = strval($translate_to);
+      $translations = Array(
+      'Date' =>'Datum',
+      'Temp.' => 'Temperatur',
+      'Feels Like' => 'Gefühlt wie',
+      'Type' => 'Art',
+      'Chance' => 'Wahr-scheinlich',
+      'Humidity' => 'Feuchte',
+      'Gust km/h' => 'Böe km/h',
+      'Direction' => 'Richtung',
+      'Hour' => 'Stunde',
+      'Clear' => 'Klar',
+      'Partly Cloudy' => 'Teilweise wolkig',
+      'Cloudy' => 'Bedeckt',
+      'Rain Likely' => 'Bedeckt mit Regen',
+      'Rain Possible' => 'Regen möglich',
+      'Wintry Mix Likely' => 'Bedeckt mit Schneeregen',
+      'Wintry Mix Possible' => 'Schneeregen möglich',
+      'Snow Likely' => 'Bedeckt mit Schnee',
+      'Snow Possible' => 'Schnee möglich',
+      'rain' => 'Regen',
+      'sleet' => 'Schneeregen',
+      'snow' => 'Schnee',
+      'thunderstorm' => 'Gewitter',
+      'windy' => 'windig',
+      'Day' => 'Tag',
+      'Daily' => 'Täglich',
+      'T High' => 'T max',
+      'T Low' => 'T min',
+      'Precip' => 'Niederschlag',
+      'Precip %' => 'Niedersch. %',
+      'Condition' => 'Wetterlage',
+      'Daylight' => 'Sonnenauf-/ untergang',
+      ' to ' => ' bis ',
+      'rising' => 'Steigend',       
+      'falling' => 'Fallend',
+      'steady' => 'Gleich',
+      'unknown' => 'Unbekannt',
+      'NNE' => 'NNO',
+      'NE' => 'NO',
+      'ENE' => 'ONO',
+      'E' => 'O',
+      'ESE' => 'OSO',
+      'SE' => 'SO',
+      'SSE' => 'SSO',
+      'Very Light Rain' => 'Sehr leichter Regen',
+      'Light Rain' => 'Leichter Regen',
+      'Moderate Rain' => 'Mäßiger Regen',
+      'Heavy Rain' => 'Starkregen' 
+
+      );
+
+      if(array_key_exists($translate_to, $translations))
+      {
+            return $translations[$translate_to];
+      }
+      else
+      {
+            return $translate_to;
+      }
+ 
+}
+
+function static_data($default_icons,&$variable_types,&$condition_icons,&$icons)
+{ 
+      Global $path,$icon_type;
+      $variable_types = [
+                                          'Boolean' => 0,
+                                          'Integer' => 1,
+                                          'Float' => 2,
+                                          'String' => 3
+                        ];
+      if($default_icons)
+      { 
+            $condition_icons = array(
+
+            'clear-day' => '01d',
+            'clear-night' => '01n',
+            'cloudy' => '04',
+            'foggy' => '15',
+            'partly-cloudy-day' => '02d',
+            'partly-cloudy-night' => '02n',
+            'possibly-rainy-day' => '40d',
+            'possibly-rainy-night' => '40n',
+            'possibly-sleet-day' => '43d',
+            'possibly-sleet-night' => '43n',
+            'possibly-snow-day' => '45d',
+            'possibly-snow-night' => '45n',
+            'possibly-thunderstorm-day' => '24d',
+            'possibly-thunderstorm-night' => '24n',
+            'rainy' => '46',
+            'sleet' => '48',
+            'snow' => '50',
+            'thunderstorm' => '30',
+            'windy' => '10'
+
+            );
+            $ID = manage_variable(false,$_IPS['SELF'],'Icons',$variable_types['String'],'~TextBox','0',false,true);
+            $icons_string = GetValueString($ID);
+            if($icons_string == '')
+            { 
+                  foreach($condition_icons as $key => $value)
+                  {
+                        $filename = $path.$condition_icons[$key].$icon_type;
+                        $icons[$key] = file_get_contents($filename); 
+                  }
+
+                  SetValueString($ID,serialize($icons));
+            }
+            else
+            {
+                  $icons = unserialize($icons_string);
+            }
+      }
+
+
+}
+
+function static_data_del($default_icons,&$variable_types,&$condition_icons,&$icons)
+{ 
+      Global $path,$icon_type,$icons_neu;
+      $variable_types = [
+                                          'Boolean' => 0,
+                                          'Integer' => 1,
+                                          'Float' => 2,
+                                         'String' => 3
+                        ];
+
+
+      if($default_icons)
+      { 
+            $condition_icons = array(
+
+            'clear-day' => '01d',
+            'clear-night' => '01n',
+            'cloudy' => '04',
+            'foggy' => '15',
+            'partly-cloudy-day' => '02d',
+            'partly-cloudy-night' => '02n',
+            'possibly-rainy-day' => '40d',
+            'possibly-rainy-night' => '40n',
+            'possibly-sleet-day' => '43d',
+            'possibly-sleet-night' => '43n',
+            'possibly-snow-day' => '45d',
+            'possibly-snow-night' => '45n',
+            'possibly-thunderstorm-day' => '24d',
+            'possibly-thunderstorm-night' => '24n',
+            'rainy' => '46',
+            'sleet' => '48',
+            'snow' => '50',
+            'thunderstorm' => '30',
+            'windy' => '10'
+
+            );
+
+            $local_path = "";//IPS_GetKernelDir() ."webfront\\user\\icons\\";
+            
+            foreach($condition_icons as $key => $value)
+            {
+                  $filename = $path.$condition_icons[$key].$icon_type;
+                  $local_file_name = $local_path.$condition_icons[$key].$icon_type;
+                  if(file_exists($local_file_name))
+                  {
+                        $icons[$key] = file_get_contents($local_file_name); 
+
+                  }
+                  else
+                  {
+                        $icons[$key] = file_get_contents($filename); 
+                        file_put_contents ( $local_file_name, $icons[$key]);
+                  }
+            }
+      }
+}
+
+function get_data($Station_ID,$token)
+{
+      global $time_lapsed;
+      $url = 'https://swd.weatherflow.com/swd/rest/better_forecast?station_id='.$Station_ID.'&units_temp=c&units_wind=kph&units_pressure=hpa&units_precip=mm&units_distance=km'; 
+
+      $headers = array(
+      "Content-Type: application/json; charset=utf-8",
+      "Authorization: Bearer ".$token
+      );
+
+
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($ch, CURLOPT_URL, $url);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+      $resp = curl_exec($ch);
+      curl_close($ch);
+
+      $forecast = json_decode ($resp);
+      $array = json_decode(json_encode($forecast), true);
+      if(array_key_exists('lightning_strike_last_epoch',$array['current_conditions']))
+      {
+            $array['current_conditions']['lightning_strike_last_epoch'] = $array['current_conditions']['lightning_strike_last_epoch'] ;
+            if($time_lapsed)
+            {
+                  $array['current_conditions']['lightning_strike_last_epoch'] =  timeEllapsedFrom($array['current_conditions']['lightning_strike_last_epoch']);
+            }
+            else
+            {
+                  $array['current_conditions']['lightning_strike_last_epoch'] = date("d-m-Y H:i:s",$array['current_conditions']['lightning_strike_last_epoch']);
+            }
+      }
+      else
+      {
+            $array['current_conditions']['lightning_strike_last_epoch'] = 0;
+      }
+
+
+   //   print_r($array);
+      return $array;
+}
+
+function timeEllapsedFrom($from) {
+  $time = time() - $from;
+  $diff = abs($time);
+  $tokens = array (
+    'J' => 31536000,
+    'M' => 2592000,
+    'W' => 604800,
+    'T' => 86400,
+    'S' => 3600,
+    'Mi' => 60,
+    'Sek' => 1
+  );
+  $result = array();
+  foreach ($tokens as $id => $length) {
+    $value = floor($diff/$length);
+    if ($value) $result[] = "$value$id" . ($value > 1 ? '' : '');
+    $diff -= $length*$value;
+  }
+  if (!count($result)) return 'In diesem Moment';
+  return ($time < 0 ? 'Nach ' : 'Vor ').join(',', $result);
+}
+
+function manage_variable($profil_update,$parent,$name,$type,$profil,$aggregation_type,$logging,$hidden)
+{
+      Global $var_liste;
+      $archive_id = IPS_GetInstanceListByModuleID ('{43192F0B-135B-4CE7-A0A7-1475603F3060}')[0];
+      $var_id = @IPS_GetVariableIDByName ($name, $parent);
+      if($var_id === false)
+      {
+            $var_id = IPS_CreateVariable ($type);
+            IPS_SetVariableCustomProfile ($var_id, $profil );
+            IPS_SetName($var_id, $name);
+            IPS_SetParent($var_id, $parent);
+            if($logging or ($type != 3))
+            { 
+                  AC_SetLoggingStatus ($archive_id, $var_id, $logging);
+                  AC_SetAggregationType ($archive_id, $var_id, $aggregation_type);
+            }
+            else
+            {
+                  AC_SetLoggingStatus ($archive_id, $var_id, $logging);
+            }
+            IPS_ApplyChanges($archive_id);
+            if($hidden) IPS_SetHidden($var_id, true); 
+      }
+      else
+      {     
+                  if(IPS_GetVariable($var_id)['VariableCustomProfile']  != $profil)
+                  {   
+                  if(IPS_GetVariable($var_id)['VariableType'] == $type)
+                  {
+                        IPS_LogMessage("Tempest", " Variablen Profil auf aktuellen Stand gebracht ".IPS_GetName($var_id)." Profil : ".$profil." Var ID".$var_id." CP ".IPS_GetVariable($var_id)['VariableCustomProfile']);
+                        IPS_SetVariableCustomProfile ($var_id, $profil );
+
+                  }
+                  else
+                  {
+                        IPS_LogMessage("Tempest", " Variablen gelöscht ".IPS_GetName($var_id)." Profil : ".$profil." Var ID".$var_id." CP ".IPS_GetVariable($var_id)['VariableCustomProfile']);
+                        IPS_DeleteVariable ($var_id);
+                        
+                        return manage_variable($profil_update,$parent,$name,$type,$profil,$aggregation_type,$logging,$hidden);
+                  }
+            }
+            else
+            {
+
+            }
+      } 
+      return $var_id;                 
+}
+
+
+function manage_include_script($parent,$name)
+{
+      Global $var_liste;
+      $script_id = @IPS_GetScriptIDByName($name, $parent);
+      if($script_id === false)
+      {
+            $script_id = IPS_CreateScript(0);
+            IPS_SetName($script_id, $name);
+            IPS_SetParent($script_id, $parent);
+      }
+      else
+      {     
+ 
+      } 
+      return $script_id;                 
+}
+
+function get_script_id($parent,$name)
+{
+      Global $var_liste;
+      $script_id = @IPS_GetScriptIDByName($name, $parent);
+      if($script_id === false)
+      {
+            $script_id = IPS_CreateScript(0);
+            IPS_SetName($script_id, $name);
+            IPS_SetParent($script_id, $parent);
+      }
+      else
+      {     
+ 
+      } 
+      return $script_id;                 
+}
+
+function check($array1,$array2)
+{
+      foreach($array1 as $key => $value)
+      {
+            if(is_array($value))
+            {
+                if(array_key_exists ($key,$array2))
+                {
+                      if(is_array($array2[$key]))
+                      {
+                            check($value,$array2[$key]);
+                      }
+                      else
+                      {
+                          echo " Key : ".$key." is not an ARRAY in the Back up Configuration \n";  
+                      }
+                }
+                else
+                {
+                      echo " Key : ".$key." not availabe in the Back up Configuration \n";
+                }  
+            } 
+            elseif(@is_array($array2[$key]))
+            {
+                  echo " Key : ".$key." is not an ARRAY in the Original Configuration \n";  
+            }
+            else
+            {
+                  if(array_key_exists ($key,$array2))
+                  {
+
+                  }
+                  else
+                  {
+                       echo " Key : ".$key." not availabe in the in the Back up Configuration \n";                      
+                  }
+            }
+      }
+}
+
