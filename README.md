@@ -11,3 +11,5 @@ The Software will install itself and will create three html pages which give you
 The Script allows for a large degree of customization. Those parameters can be stored locally and  used on the fly
 
 The devleopment of the Software is discussed in the following Forum : https://community.symcon.de/t/tempest/51636
+
+More details can be found in the header of the script 
