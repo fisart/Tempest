@@ -1,6 +1,6 @@
 # Tempest
 
-Forecast is a PHP Script which needs the following preconditions :
+Tempest Forecast is a PHP Script which needs the following preconditions :
 
 1.) a Tempest Weather Station from Weather flow, 
 2.) a Token you can generate here : https://tempestwx.com/settings/tokens/ 
@@ -9,9 +9,17 @@ Forecast is a PHP Script which needs the following preconditions :
 
 The Software will install itself and will create three html pages which give you details of the daily, hourly and immediate Weather condition
 The Script allows for a large degree of customization. Those parameters can be stored locally and  used on the fly
+The source of the Data is Weatherflow and you need an Internet Connection
 
 The devleopment of the Software is discussed in the following Forum : https://community.symcon.de/t/tempest/51636
 
 More details can be found in the header of the script 
 
 
+Tempest Station is a PHP Script which needs the following preconditions :
+
+1.) a Tempest Weather Station from Weather flow, 
+2.) IP Symcon which you can find here : https://www.symcon.de/
+3.) a UDP Socket in IP Symcon with Port 50222
+
+The Program receives realtime Data from the local Tempest Weatherstation and Stores the Data in a number of Variables
