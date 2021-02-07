@@ -1,8 +1,9 @@
 <?php
-//----------------------------------------Version 3.2.1  Datum 2.02.2021 BestEx/Erpe  --------------------------------
+//----------------------------------------Version 3.3.0  Datum 6.02.2021 BestEx/Erpe  --------------------------------
 // Das Skript legt automatisch sieben Variablen an : All Data => ist eine String Variable in der serialisiert das von Tempest empfangene Array mit Daten für den Nutzer abgelegt wird.
 // Das Program nutzt diese Variable nicht
-// Hourly Forecast, sowie Daily Forecast sind die String Variablen die den HTML String zur Anzeige des Forecasts  beinhalten.  Station zeigt die aktuellen Werte der im Moment exisitierenden Verhältnisse an 
+// Hourly Forecast, sowie Daily Forecast sind die String Variablen die den HTML String zur Anzeige des Forecasts  beinhalten.  Station zeigt die aktuellen Werte der im Moment exisitierenden Verhältnisse an und Device die Daten der Tempest 
+// Um die Tabelle derTempest Daten zu erzeugen genügt es einen Link auf die "obs_st" Kategorie (Befindet sich unterhalb des Skripts Tempest Station) zu erzeugen und unter dieses Skript zu plazieren 
 // Token und Station ID speichert die Zugangs Daten
 // in der String variablen Icons werden beim ersten Durchlauf die externen default Icons geladen und lokal in der variable gespeichert
 
@@ -95,6 +96,9 @@ $fire = 'FF3300';
 $black = '000000';
 $violet = '774477';
 
+
+
+
 // Zuordnung der Farben und der Alpha Einstellung  zu den Feldern der Anzeige 
 
  
@@ -102,84 +106,93 @@ $violet = '774477';
 $type['hours']['color_label_background'] = $blue.$alpha_label; 
 $type['days']['color_label_background'] = $blue.$alpha_label; 
 $type['now']['color_label_background'] = $blue.$alpha_label; 
-
+$type['device']['color_label_background'] = $blue.$alpha_label; 
 
 $type['hours']['color_text_label'] =$white.$alpha_text;
 $type['days']['color_text_label'] =$white.$alpha_text;
 $type['now']['color_text_label'] =$white.$alpha_text;
-
+$type['device']['color_text_label'] =$white.$alpha_text;
 
 $type['hours']['color_column_text'] = $white.$alpha_text;
 $type['days']['color_column_text'] = $white.$alpha_text;
 $type['now']['color_column_text'] = $white.$alpha_text;
-
+$type['device']['color_column_text'] = $white.$alpha_text;
 
 $type['hours']['color_column_background'] = $blue.$alpha; 
 $type['days']['color_column_background'] = $blue.$alpha; 
 $type['now']['color_column_background'] = $blue.$alpha; 
+$type['device']['color_column_background'] = $blue.$alpha; 
 
 $type['hours']['border_color'] = $light_blue.$alpha_border;
 $type['days']['border_color']  = $light_blue.$alpha_border;
 $type['now']['border_color']  = $light_blue.$alpha_border1;
-
+$type['device']['border_color']  = $light_blue.$alpha_border1;
 // Ein paar Schalter zum Spielen
 
 $type['hours']['border'] = 'collapse'; // Werte können 'collapse' oder 'separate' sein
 $type['days']['border'] = 'collapse';
 $type['now']['border'] = 'collapse';
+$type['device']['border'] = 'collapse';
 
 $type['hours']['nr_of_forecasts'] = 200; //max 240
 $type['days']['nr_of_forecasts']  = 10; //max 10
 $type['now']['nr_of_forecasts']  = 1; //
+$type['device']['nr_of_forecasts']  = 1; //
 
 $type['hours']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
 $type['days']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
 $type['now']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
+$type['device']['intervall'] = 1; // z.b. bei 4 wird nur jede 4te Stunde angezeigt 
 
 $type['hours']['table_layout'] = 'fixed'; // 'fixed' 'auto'
 $type['days']['table_layout']  = 'fixed'; // 'fixed' 'auto'
 $type['now']['table_layout']  = 'fixed'; // 'fixed' 'auto'
-
+$type['device']['table_layout']  = 'fixed'; // 'fixed' 'auto'
 
 $type['hours']['tabellen_breite_in_przt'] = true;  // True bzw false 
 $type['days']['tabellen_breite_in_przt'] = true;  // True bzw false 
 $type['now']['tabellen_breite_in_przt']  = true;  // True bzw false 
+$type['device']['tabellen_breite_in_przt']  = true;  // True bzw false 
 
 $type['hours']['width'] = 4100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
 $type['days']['width'] = 225; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
 $type['now']['width'] =  100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
-
+$type['device']['width'] =  100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
 
 $type['hours']['fontSize'] = 1.5; //Schriftgröße in px
 $type['days']['fontSize'] = 1.5; //Schriftgröße in px
 $type['now']['fontSize'] =  3; //Schriftgröße in px
+$type['device']['fontSize'] =  3.5; //Schriftgröße in px
 
 $type['hours']['font_size_scale_type'] = 'vw';//vw,px
 $type['days']['font_size_scale_type'] = 'vw';
 $type['now']['font_size_scale_type'] = 'vw';
-
+$type['device']['font_size_scale_type'] = 'vw';
 
 $type['hours']['wrap_label'] = "nowrap";  // Zeilenumbruch wird verhindert wenn "nowrap" erlaubt bei ""
 $type['days']['wrap_label'] = "nowrap";
 $type['now']['wrap_label'] = "nowrap";
+$type['device']['wrap_label'] = "nowrap";
 
 $type['hours']['wrap_column'] = "nowrap";
 $type['days']['wrap_column'] = "nowrap";
 $type['now']['wrap_column'] = "nowrap";
+$type['device']['wrap_column'] = "nowrap";
 
 $type['hours']['border_size'] = 1; // in px
 $type['days']['border_size']  = 1; // in px
 $type['now']['border_size']  = 1; // in px
-
+$type['device']['border_size']  = 1; // in px
 
 $type['hours']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
 $type['days']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
 $type['now']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
+$type['device']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
 
 $type['hours']['language'] = 'German'; // 'German', 'English'
 $type['days']['language'] = 'German';
 $type['now']['language'] = 'German';
-
+$type['device']['language'] = 'German';
 
 $type['hours']['icon_height'] = 40;
 $type['hours']['icon_width'] = 40;
@@ -187,25 +200,28 @@ $type['days']['icon_height']  = 40;
 $type['days']['icon_width']= 40;
 $type['now']['icon_height']  = 25;
 $type['now']['icon_width'] = 25;
-
+$type['device']['icon_height']  = 25;
+$type['device']['icon_width'] = 25;
 
 $type['hours']['selector'] = 'time'; 
 $type['days']['selector'] = 'day_start_local';
 $type['now']['selector'] = 'time';
+$type['device']['selector'] = 'time';
 
 $type['hours']['type'] = 'hourly'; 
 $type['days']['type'] = 'daily';
 $type['now']['type'] = 'current_conditions';
+$type['device']['type'] = 'device';
 
 $type['hours']['dataset_id'] = ''; 
 $type['days']['dataset_id'] = '';
 $type['now']['dataset_id'] = '';
-
+$type['device']['dataset_id'] = '';
 
 $type['hours']['VAR_Name'] = 'Hourly Forecast'; 
 $type['days']['VAR_Name'] = 'Daily Forecast';
 $type['now']['VAR_Name'] = 'Station';
-
+$type['device']['VAR_Name'] = 'Device';
 
 // Parameter (Reihenfolge der Anzeige, Zeile Aktiviert bzw. deaktiviert, Text in English und Deutsch, Text Zusatz) für die Stunden Vorhersage 
 $type['hours']['parameter'] = array(
@@ -638,13 +654,130 @@ $type['now']['parameter']  = array(
                               'Active' => false,
                               'Suffix' => array('default' => '','merge' =>''), 
                               'Merge with' => array("","")
+                              )
+);
+  
+
+  
+$type['device']['parameter']  = array(
+             '0' => array(
+                              'German' => 'Zeit',
+                              'English' => 'Time',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+              '1' => array(
+                              'German' => 'Windstille/~/Böe',
+                              'English' => 'Wind Lull/~/Gust',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  '','merge' =>''),
+                              'Merge with' => array(2,3)
+                              ), 
+             '2'  => array(
+                              'German' => 'Wind ~',
+                              'English' => 'Wind ~',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' km/h','merge' =>''),
+                              'Merge with' => array("","")
+                              ), 
+             '3'    => array(
+                              'German' => 'Böe',
+                              'English' => 'Gust',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' km/h','merge' =>' km/h'),
+                              'Merge with' => array("","")
+                              ),
+
+            '4'      => array(
+                              'German' => 'Richtung',
+                              'English' => 'Direction',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>' °'), 
+                              'Merge with' => array("","")
+                              ), 
+            '6'      => array(
+                              'German' => 'Luftdruck Station',
+                              'English' => 'Presssure Station',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' hPa','merge' =>''),
+                              'Merge with' => array("","")
+                              ), 
+            '7'    => array(
+                              'German' => 'Temp. + Feuchte',
+                              'English' => 'Temp. + Humidity',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' °C','merge' => ' %'),
+                              'Merge with' => array("8","")
+                              ),
+ 
+   
+
+            '8'      => array(
+                              'German' => 'Feuchte',
+                              'English' => 'Humidity',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' %','merge' =>' %'),
+                              'Merge with' => array("","")
+                              ),
+            '9' => array(
+                              'German' => 'Helligkeit',
+                              'English' => 'Brightness',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' Lx','merge' =>' Lx'),
+                              'Merge with' => array("","")
                               ),
   
+             '10' => array(
+                              'German' => 'UV',
+                              'English' => 'UV',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>' '), 
+                              'Merge with' => array("","")
+                              ),
 
+
+           '11' => array(
+                              'German' => 'Solar Strahlung/Helligkeit/UV',
+                              'English' => 'Solar Radiation',
+                              'Active' => true,
+                              'Suffix' => array('default' =>  ' W/m²','merge' =>''),
+                              'Merge with' => array(9,10)
+                              ),
   
+            '12' => array(
+                              'German' => 'Niederschlag Heute',
+                              'English' => 'Precip Today',
+                              'Active' => false,
+                              'Suffix' => array('default' =>  ' mm','merge' =>' mm'),
+                              'Merge with' => array("","")
+                              ),
 
+            '13'     => array(
+                              'German' => 'Niederschlagsart',
+                              'English' => 'Type',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array("","")
+                              ),
+  
+            '14' =>       array(
+                              'German' => 'Entfernung letzter Blitz',
+                              'English' => 'Distance last Lightning',
+                              'Active' => false,
+                              'Suffix' => array('default' => '','merge' =>' km'), 
+                              'Merge with' => array("","")
+                              ),
+ 
+            '15' => array(
+                              'German' => '# Blitze + Entfernung',
+                              'English' => '# Lightning + Distance',
+                              'Active' => true,
+                              'Suffix' => array('default' => '','merge' =>''), 
+                              'Merge with' => array(14)
+                              )
 
-
+                  
 );
 
 
@@ -657,7 +790,7 @@ static_data($default_icons,$variable_types,$condition_icons,$icons);
 $type = configuration_back_up_handler($configuration_back_up_command,$config_name,$type);
 if($type === false) return;
 
-//print_r($type);
+
 
 foreach($type as $key => $value)
 {
@@ -671,7 +804,8 @@ $token = check_secret($token,'Token');
 $Station_ID = check_secret($Station_ID,'Station ID');
 if(!$token or !$Station_ID) return;
 $array = get_data($Station_ID,$token);
-//print_r($array);
+$array_device =  get_device_data();
+
 
 //-----------------------------------------------------Abspeichern des gesamten Tempest Datensatzes --------------------
 $string_data = serialize($array); 
@@ -680,14 +814,27 @@ SetValueString($ID,$string_data);
 
 //------------------------------------------------Generiere Tabellen -------------------------------------
 
-foreach($type as $key => $value) // hours, days, now
+foreach($type as $key => $value) // hours, days, now, device
 { 
       $label_background = '<td style="background-color: #'.$value['color_label_background'].'" colspan="1" '.$value['wrap_label'].'>';
-     // $label_background = '<td style="background-color: #'.$value['color_label_background'].'" colspan="1" ';
       $column_background = '<td style="background-color: #'.$value['color_column_background'].'" colspan="1" '.$value['wrap_column'].'>';
       $label_text_color = '<FONT COLOR="#'.$value['color_text_label'].'">';
       $column_text_color = '<FONT COLOR="#'.$value['color_column_text'].'">';
-      build_html_page($value['VAR_Name'],$value['type'],$array,$value['nr_of_forecasts'],$value['intervall'],$value['selector'],$value['width'],$value['przt'],$value['border'],$value['border_size'],$value['border_color'],$value['fontSize'],$value['text_align'],$value['table_layout'],$value['language'],$value['icon_width'],$value['icon_height'],$value['parameter'],$label_background,$column_background,$value['font_size_scale_type']);
+      if($key == 'device')
+      { 
+            if(is_array($array_device))
+            { 
+                  build_html_page($value['VAR_Name'],$value['type'],$array_device ,$value['nr_of_forecasts'],$value['intervall'],$value['selector'],$value['width'],$value['przt'],$value['border'],$value['border_size'],$value['border_color'],$value['fontSize'],$value['text_align'],$value['table_layout'],$value['language'],$value['icon_width'],$value['icon_height'],$value['parameter'],$label_background,$column_background,$value['font_size_scale_type']);
+            }
+            else
+            {
+
+            }
+      }
+      else
+      {
+            build_html_page($value['VAR_Name'],$value['type'],$array,$value['nr_of_forecasts'],$value['intervall'],$value['selector'],$value['width'],$value['przt'],$value['border'],$value['border_size'],$value['border_color'],$value['fontSize'],$value['text_align'],$value['table_layout'],$value['language'],$value['icon_width'],$value['icon_height'],$value['parameter'],$label_background,$column_background,$value['font_size_scale_type']);
+      }
 }
 
 
@@ -848,21 +995,34 @@ function build_html_page($var_name,$type, $array, $nr_of_forecasts, $intervall,$
 { 
       Global $variable_types;
       //--------------------------------Aufbereitung der Rohdaten für die Stundenvorhersage-----------------------------------
-      if ($type != 'current_conditions') 
+      if ($type == 'hourly' or $type == 'daily') 
       {
             $condition = get_detailed_data($type,$array,$nr_of_forecasts,$intervall,$selector);
       }
-      else
+      elseif ($type == 'current_conditions')
       {
             $condition = get_station_data($array,'time');
       }
+      elseif ($type == 'device')
+      {
+           $condition = $array; 
+      }
+      else
+      {
+          return;
+      }
+
       $content = format_content($type,$width,$przt,$border,$border_size,$border_color,$fontSize,$text_align,$table_layout,$font_size_scale_type);
       $content .= '<table class="Forecast_Profile_'.$type.'">'; // moved from format_content function
 
       //---------------------------------Tabelle wird generiert---------------------------------------------------------------
+
       foreach($parameter as $key => $value)
-      {     //print_r($value['Suffix']);
-            if($value['Active']) $content = build_content($content,$value[$language],$condition,$key,$value['Suffix'],$value['Merge with'],$icon_width,$icon_height,$parameter,$language,$label_background,$column_background);
+      {     
+            if($value['Active'])
+            { 
+                  $content = build_content($content,$value[$language],$condition,$key,$value['Suffix'],$value['Merge with'],$icon_width,$icon_height,$parameter,$language,$label_background,$column_background);
+            } 
       }
       $content .= '</table>';
       //--------------------------------Fertige Tabelle wird als HTML/String Datei gespeichert-------------------------------
@@ -895,14 +1055,16 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
       $content .= '<tr>'; //add
       $content .= $label_background.$label_text_color.$label_text.'</td>'; //add </td>
       $nr = 0;
+ 
       foreach($condition as $key => $value)
-      {
-            if($field == 'local_day')
+      { 
+            if($field === 'local_day')
             { 
+
                   if( 
-                        ($value['local_hour'] == '0:00') 
+                        ($value['local_hour'] === '0:00') 
                         or
-                        ($nr == 0)
+                        ($nr === 0)
                      )
                   { 
                         $content .= $label_background.$label_text_color.$value[$field]; 
@@ -912,11 +1074,11 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
                         $content .= $label_background.$label_text_color.' ';        
                   }
             }
-            elseif($field == 'local_hour')
+            elseif($field === 'local_hour')
             {
                 $content .= $label_background.$label_text_color.$value[$field].$suffix['default'];  
             }
-            elseif($field == 'icon')
+            elseif($field === 'icon')
             {
                   if($default_icons)
                   {     
@@ -929,20 +1091,20 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
                   }
                   $content .= $label_background.$label_text_color.$icon; 
             }
-            elseif($field == 'day_start_local')
+            elseif($field === 'day_start_local')
             {
-                  if($language == 'German') $content .= $label_background.$label_text_color.strftime("%a %e",$key).$suffix['default']; else $content .= $label_background.$label_text_color.date("D d",$key).$suffix['default']; 
+                  if($language === 'German') $content .= $label_background.$label_text_color.strftime("%a %e",$key).$suffix['default']; else $content .= $label_background.$label_text_color.date("D d",$key).$suffix['default']; 
             }
-            elseif($field == 'sunrise')
+            elseif($field === 'sunrise')
             {
                   $content .= $column_background.$column_text_color.date("H:i",$value['sunrise']).' - '.date("H:i",$value['sunset']);    
             }
-            elseif($field == 'time')
+            elseif($field === 'time')
             {
                   $content .= $label_background.$label_text_color.date("H:i",$key).$suffix['default']; 
             }
             else
-            {
+            { 
                   if(array_key_exists($field,$value))
                   { 
                         $data = translations(strval($value[$field])).$suffix['default'];
@@ -1003,6 +1165,7 @@ function get_detailed_data($field,$array,$nr_of_forecasts,$intervall,$index)
       }
       return $condition;
 }
+
 
 function get_station_data($array,$index)
 { 
@@ -1066,7 +1229,10 @@ Global $German;
       'Very Light Rain' => 'Sehr leichter Regen',
       'Light Rain' => 'Leichter Regen',
       'Moderate Rain' => 'Mäßiger Regen',
-      'Heavy Rain' => 'Starkregen' 
+      'Heavy Rain' => 'Starkregen',
+      'None' => 'Kein Niederschlag',
+      'Rain' => 'Es Regnet',
+      'Hail' => 'Es Hagelt'  
 
       );
 
@@ -1230,11 +1396,114 @@ function get_data($Station_ID,$token)
       {
             $array['current_conditions']['lightning_strike_last_epoch'] = 0;
       }
-
-
-   //   print_r($array);
       return $array;
 }
+
+
+function get_device_data()
+{
+      $array = NULL;
+      $niederschlags_typen = [0 => "None", 1 => "Rain", 2 => "Hail"];
+      foreach(IPS_GetChildrenIDs($_IPS['SELF']) as $key => $value)
+      {
+            if(IPS_GetObject ($value)['ObjectType'] == 6)
+            { 
+                  $data = unserialize(GetValueString(IPS_GetObjectIDByName ('Rohdaten',IPS_GetLink($value)['TargetID'])));
+                  $array[] = $data['obs'][0];  
+            }
+            else
+            {
+
+            }
+      }
+      if(is_array($array))
+      {
+            $array[0][0] = date("H:i",$array[0][0]);
+            $array[0][4] = direction_to_text($array[0][4]);
+            $array[0][13] = $niederschlags_typen[$array[0][13]];
+            $array[0][6] = number_format(floatval($array[0][6]),2,",","."); 
+            return $array;
+      }
+      else
+      {     echo " Alle Tabellen erzeugt bis auf die Device Tabelle da der Link zur obs_st Kategorie nicht gefunden wurde ";
+            return false;
+      }
+
+}
+
+function direction_to_text($direction)
+{
+      if($direction >= 0 and  $direction < 22.5 )
+      {
+            return "N";
+      }
+      elseif($direction >= 22.5 and $direction < 45 )
+      {
+            return "NNO";
+      }
+      elseif($direction >= 45 and $direction < 67.5 )
+      {
+            return "NO";
+      }
+      elseif($direction >= 67.5 and $direction < 90)
+      {
+            return "ONO";
+      }
+      elseif($direction >= 90 and $direction < 112.5 )
+      {
+            return "O";
+      }
+      elseif($direction >=112.5 and $direction < 135)
+      {
+            return "OSO";
+      }
+      elseif($direction >=135 and  $direction < 157.5)
+      {
+            return "SO";
+      }
+      elseif($direction >= 157.5 and $direction <180 )
+      {
+            return "SSO";
+      }
+      elseif($direction >=180 and $direction < 202.5 )
+      {
+            return "S";
+      }
+      elseif($direction >=202.5 and $direction < 225)
+      {
+            return "SSW";
+      }
+      elseif($direction >= 225 and $direction < 247.5 )
+      {
+            return "SW";
+      }
+      elseif($direction >= 247.5 and $direction < 270 )
+      {
+            return "WSW";
+      }
+      elseif($direction >= 270 and $direction< 292.5 )
+      {
+            return "W";
+      }
+      elseif($direction >= 292.5 and $direction < 315 )
+      {
+            return "WNW";
+      }
+      elseif($direction >= 315 and $direction < 337.5 )
+      {
+            return "NW";
+      }
+      elseif($direction >=337.5 and $direction < 360)
+      {
+            return "NNW";
+      }
+      else
+      {
+            return false;
+      }
+
+}
+
 
 function timeEllapsedFrom($from) {
   $time = time() - $from;
@@ -1381,4 +1650,3 @@ function check($array1,$array2)
             }
       }
 }
-
