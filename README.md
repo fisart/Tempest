@@ -8,7 +8,7 @@ Tempest Forecast is a PHP Script which needs the following preconditions :
 4.) IP Symcon which you can find here : https://www.symcon.de/
 
 The Software will install itself and will create four html pages which give you details of the daily, hourly and immediate Weather condition 
-(This Data comes from Weatherflow) plus the Device Data generated from the Tempest Station Skript (This Data comes from your local Tempest Weatherstation).
+(This Data comes from Weatherflow) plus a HTML table for the Device Data generated from the Tempest Station Skript (This Data comes from your local Tempest Weatherstation).
 The Script allows for a large degree of customization. Those parameters can be stored locally and  used on the fly
 The source of the Data is Weatherflow and you need an Internet Connection
 
