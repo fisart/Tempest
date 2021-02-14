@@ -1,5 +1,5 @@
 <?php
-//----------------------------------------Version 3.3.0  Datum 6.02.2021 BestEx/Erpe  --------------------------------
+//----------------------------------------Version 3.3.1  Datum 14.02.2021 BestEx/Erpe  --------------------------------
 // Das Skript legt automatisch sieben Variablen an : All Data => ist eine String Variable in der serialisiert das von Tempest empfangene Array mit Daten für den Nutzer abgelegt wird.
 // Das Program nutzt diese Variable nicht
 // Hourly Forecast, sowie Daily Forecast sind die String Variablen die den HTML String zur Anzeige des Forecasts  beinhalten.  Station zeigt die aktuellen Werte der im Moment exisitierenden Verhältnisse an und Device die Daten der Tempest 
@@ -1062,7 +1062,7 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
             { 
 
                   if( 
-                        ($value['local_hour'] === '0:00') 
+                        ($value['local_hour'] == '0:00') 
                         or
                         ($nr === 0)
                      )
