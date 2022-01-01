@@ -1,5 +1,5 @@
 <?php
-//----------------------------------------Version 3.3.1  Datum 14.02.2021 BestEx/Erpe  --------------------------------
+//----------------------------------------Version 4.0.0  Datum 01.01.2022 BestEx/Erpe  --------------------------------
 // Das Skript legt automatisch sieben Variablen an : All Data => ist eine String Variable in der serialisiert das von Tempest empfangene Array mit Daten für den Nutzer abgelegt wird.
 // Das Program nutzt diese Variable nicht
 // Hourly Forecast, sowie Daily Forecast sind die String Variablen die den HTML String zur Anzeige des Forecasts  beinhalten.  Station zeigt die aktuellen Werte der im Moment exisitierenden Verhältnisse an und Device die Daten der Tempest 
@@ -9,11 +9,54 @@
 
 
 // Hier bitte die entsprechenden Daten eintragen
-set_time_limit(60); 
+
 
 // Um das ständige Neueintragen des Tokens und der Station ID bei updates zu vermeiden genügt es in Zukunft diese Daten nur einmal anzugeben. Das Skript speichert die Daten in zwei Variablen ab. Danach kann die Eingabe leer '' bleiben.
+
+// In der Version. 4.0 wurden die folgenden drei neuen Funktionen eingepflegt:
+// 1.) Wasserstände für Ebbe und Flut (Tide) an Stränden in den USA können angezeigt werden. Dazu muss eine Stations Nummer für die Variable $tide_station_id angegeben werden und wie üblich die Anzeige für Tide in der Stunden Annzeige zu aktivieren
+//     US Tide Api https://api.tidesandcurrents.noaa.gov/api/prod/ Station ID von Port Everglade https://tidesandcurrents.noaa.gov/map/
+//     Zum deaktivieren dieser Funktion als $tide_station_id = 0 eintragen 
+// 2.) Die Tempest Wetterstation kann in einer anderen Zeitzone betrieben werden  als der Server der die Daten auswertet. Dazu muss man die Rohdaten des entfernten Systems auf den lokalen Symcon Server übertragen   
+//     Um die Uhrzeiten der entfernten Wetterstation richtig anzuzeigen kann eine Zeitkorrektur in Sekunden angegeben werden : $time_zone_correction = intval(60*60*6); ist z.B. der Wert für eine Wetterstation in Florida
+//     Diese Funktion wird zum Beispiel benötigt wenn die Anzeige aller IP-Symcon Systeme über einen IPS Viewer durchgeführt werden solllen. 
+// 3.) Die angezeigten Werte der Wetterstation können nun entsprechend des aktuellen Wertes im Fabton variiert werden. Dazu  wird ein Array mit Farbcodes in HEX angelegt.
+//     Das Array kann beliebig viele Farbstufen enthalten. Die hier gewählte Parametriesierung nutzt nur zwei Werte (Varriationen von Blau)
+//     $start_wert_farb_gradient = '73a5c6'; 
+//     $end_wert_farb_gradient  =  '1e3f66';
+//     Diese Werte stehen in den Arrays :
+//      $gradient_humidity             
+//      $gradient_precip                
+//      $gradient_air_temperature       
+//      $gradient_feels_like           
+//      $gradient_sea_level_pressure   
+//      $gradient_wind_gust            
+//      $gradient_uv                   
+//      $gradient_tide                 
+//      $gradient_air_temp_low          
+//      $gradient_air_temp_high       
+//      $gradient_precip_type        
+//      $gradient_relative_humidity   
+//     Hier ist ein Beispiel für eine breitere Farbskale : $gradient_humidity = array($light_green,$green,$green1,$light_blue,$blue,$blue1,$violet,$orange,$red1,$fire);
+//     Falls die Funktion deaktiviert werden soll muss man für den ersten Wert ($start_wert_farb_gradient) ein '' angeben
+
+
 $token = '';
 $Station_ID = '';
+$tide_station_id = 8722956;  //US Tide Api https://api.tidesandcurrents.noaa.gov/api/prod/ Station ID von Port Everglade (8722956) https://tidesandcurrents.noaa.gov/map/
+$time_zone_correction = intval(60*60*6);
+$tide_forecast_nr_of_hours = 240;
+
+
+$start_wert_farb_gradient = '73a5c6'; // '' = deaktviert
+$end_wert_farb_gradient  =  '1e3f66';
+
+
+$tide = get_tide_data($tide_station_id,$tide_forecast_nr_of_hours);
+
+
+
+
 
 // Es gibt die folgenden Konfigurations  Modis : 
 //                      "Save"  : Konfigurationsdaten  type werden in dem Skript "Configurations" abgespeichert. Es können mehrere Versionen der Konfigurations Daten abgelegt werden. 
@@ -77,7 +120,7 @@ $default_icons = true; // Falls eigene ICONS verwendet werden sollen  auf false 
 // Transparenz Werte 
 $alpha = '33'; // Transparenzwert für den Hintergrund
 $alpha_text = ''; // Transparenzwert für den Text 
-$alpha_label = '80'; // Transparenzwert für den Text der Label
+$alpha_label = '20'; // Transparenzwert für den Text der Label
 $alpha_border = '0F';// Transparenzwert für die Umrandung der Tabellenfelder
 $alpha_border1 = '1F';// Transparenzwert für die Umrandung der Tabellenfelder
 //  HEX Farbfelder. Weitere Farben können als HEX  beliebig hinzugefügt werden 
@@ -95,18 +138,38 @@ $blood_orange = 'FF6666';
 $fire = 'FF3300';
 $black = '000000';
 $violet = '774477';
+$red1 = 'CC0000';
+$yellow1 = 'EEEE00';
+$green1 = '257a00';
+$blue1 = '0088EE';
+$dark_blue = '00008b';
+
+// Farbskalen für die Wertgetriebenen Farbtöne
 
 
 
+
+$gradient_humidity              = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_precip                = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_air_temperature       = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_feels_like            = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_sea_level_pressure    = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_wind_gust             = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_uv                    = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_tide                  = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_air_temp_low          = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_air_temp_high         = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_precip_type           = array($start_wert_farb_gradient,$end_wert_farb_gradient);
+$gradient_relative_humidity     = array($start_wert_farb_gradient,$end_wert_farb_gradient);
 
 // Zuordnung der Farben und der Alpha Einstellung  zu den Feldern der Anzeige 
 
  
 
-$type['hours']['color_label_background'] = $blue.$alpha_label; 
-$type['days']['color_label_background'] = $blue.$alpha_label; 
-$type['now']['color_label_background'] = $blue.$alpha_label; 
-$type['device']['color_label_background'] = $blue.$alpha_label; 
+$type['hours']['color_label_background'] = $light_grey.$alpha_label; 
+$type['days']['color_label_background'] = $light_grey.$alpha_label; 
+$type['now']['color_label_background'] = $light_grey.$alpha_label; 
+$type['device']['color_label_background'] = $light_grey.$alpha_label; 
 
 $type['hours']['color_text_label'] =$white.$alpha_text;
 $type['days']['color_text_label'] =$white.$alpha_text;
@@ -134,7 +197,7 @@ $type['days']['border'] = 'collapse';
 $type['now']['border'] = 'collapse';
 $type['device']['border'] = 'collapse';
 
-$type['hours']['nr_of_forecasts'] = 200; //max 240
+$type['hours']['nr_of_forecasts'] = 210; //max 240
 $type['days']['nr_of_forecasts']  = 10; //max 10
 $type['now']['nr_of_forecasts']  = 1; //
 $type['device']['nr_of_forecasts']  = 1; //
@@ -154,20 +217,20 @@ $type['days']['tabellen_breite_in_przt'] = true;  // True bzw false
 $type['now']['tabellen_breite_in_przt']  = true;  // True bzw false 
 $type['device']['tabellen_breite_in_przt']  = true;  // True bzw false 
 
-$type['hours']['width'] = 4100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
-$type['days']['width'] = 225; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
+$type['hours']['width'] = 3400; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
+$type['days']['width'] = 177; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
 $type['now']['width'] =  100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
 $type['device']['width'] =  100; // Breite der Anzeige (Falls % max. 100 ansonsten in PX) in  Sollte angepasst werden wenn die Anzahl der Vorhersage Tage verringert wird.
 
-$type['hours']['fontSize'] = 1.5; //Schriftgröße in px
-$type['days']['fontSize'] = 1.5; //Schriftgröße in px
+$type['hours']['fontSize'] = 13; //Schriftgröße in px
+$type['days']['fontSize'] = 13; //Schriftgröße in px
 $type['now']['fontSize'] =  3; //Schriftgröße in px
-$type['device']['fontSize'] =  3.5; //Schriftgröße in px
+$type['device']['fontSize'] =  14; //Schriftgröße in px
 
-$type['hours']['font_size_scale_type'] = 'vw';//vw,px
-$type['days']['font_size_scale_type'] = 'vw';
+$type['hours']['font_size_scale_type'] = 'px';//vw,px
+$type['days']['font_size_scale_type'] = 'px';
 $type['now']['font_size_scale_type'] = 'vw';
-$type['device']['font_size_scale_type'] = 'vw';
+$type['device']['font_size_scale_type'] = 'px';
 
 $type['hours']['wrap_label'] = "nowrap";  // Zeilenumbruch wird verhindert wenn "nowrap" erlaubt bei ""
 $type['days']['wrap_label'] = "nowrap";
@@ -189,17 +252,17 @@ $type['days']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
 $type['now']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
 $type['device']['text_align'] = 'left'; //Spaltenausrichung: left, right, center
 
-$type['hours']['language'] = 'German'; // 'German', 'English'
-$type['days']['language'] = 'German';
-$type['now']['language'] = 'German';
-$type['device']['language'] = 'German';
+$type['hours']['language'] = 'English'; // 'German', 'English'
+$type['days']['language'] = 'English';
+$type['now']['language'] = 'English';
+$type['device']['language'] = 'English';
 
-$type['hours']['icon_height'] = 40;
-$type['hours']['icon_width'] = 40;
-$type['days']['icon_height']  = 40;
-$type['days']['icon_width']= 40;
-$type['now']['icon_height']  = 25;
-$type['now']['icon_width'] = 25;
+$type['hours']['icon_height'] = 70;
+$type['hours']['icon_width'] = 70;
+$type['days']['icon_height']  = 70;
+$type['days']['icon_width']= 70;
+$type['now']['icon_height']  = 75;
+$type['now']['icon_width'] = 75;
 $type['device']['icon_height']  = 25;
 $type['device']['icon_width'] = 25;
 
@@ -223,7 +286,9 @@ $type['days']['VAR_Name'] = 'Daily Forecast';
 $type['now']['VAR_Name'] = 'Station';
 $type['device']['VAR_Name'] = 'Device';
 
+
 // Parameter (Reihenfolge der Anzeige, Zeile Aktiviert bzw. deaktiviert, Text in English und Deutsch, Text Zusatz) für die Stunden Vorhersage 
+
 $type['hours']['parameter'] = array(
             'time' => array(
                               'German' => 'Zeit',
@@ -264,6 +329,7 @@ $type['hours']['parameter'] = array(
                               'German' => 'möglicher Niederschlag',
                               'English' => 'Precip(mm)',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> 'precip_probability', "intensity" => "ee","gradient" => $gradient_precip),                           
                               'Suffix' => array('default' =>  ' mm','merge' =>''),    
                               'Merge with' => array('precip_probability',"")
                               ),
@@ -279,20 +345,24 @@ $type['hours']['parameter'] = array(
                               'German' => 'Temperatur',
                               'English' => 'Temp.',
                               'Active' => false,
+                              'Color_Gradient' => array("value"=> 'air_temperature', "intensity" => "ee","gradient" => $gradient_air_temperature),  
                               'Suffix' => array('default' =>  ' °C','merge' =>' °C'),                               
                               'Merge with' => array('feels_like',"")
                               ), 
             'feels_like' => array(
                               'German' => 'Temp gefühlt/gemessen',
                               'English' => 'TF / TA',
-                              'Active' => true,                              
+                              'Active' => true,
+                              'Color_Gradient' => array("value"=> 'feels_like', "intensity" => "ee","gradient" => $gradient_feels_like),                              
                               'Suffix' => array('default' =>  '','merge' =>''),    
                               'Merge with' => array('air_temperature',"")
                               ), 
+
             'relative_humidity' => array(
                               'German' => 'Feuchte',
                               'English' => 'Humidity',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_humidity),   
                               'Suffix' => array('default' =>  ' %','merge' =>''),    
                               'Merge with' => array("","")
                               ),
@@ -300,6 +370,7 @@ $type['hours']['parameter'] = array(
                               'German' => 'Luftdruck NN',
                               'English' => 'Pres.',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_sea_level_pressure),                           
                               'Suffix' => array('default' => ' hPa','merge' =>''), 
                               'Merge with' => array("","")
                               ), 
@@ -321,6 +392,7 @@ $type['hours']['parameter'] = array(
                               'German' => 'Wind Richtung/~/Böe',
                               'English' => 'Di/Avg/Gust',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> 'wind_gust', "intensity" => "ee","gradient" => $gradient_wind_gust),                               
                               'Suffix' => array('default' => '','merge' =>''), 
                               'Merge with' => array('wind_avg','wind_gust')
                               ), 
@@ -335,10 +407,20 @@ $type['hours']['parameter'] = array(
                               'German' => 'UV',
                               'English' => 'UV',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_uv),   
                               'Suffix' => array('default' => '','merge' =>''), 
                               'Merge with' => array("","")
-                              )
+                              ),
+            'TIDE' => array(
+                            'German' => 'Tide above MLLW',
+                            'English' => 'Tide above MLLW',
+                            'Active' => true,
+                            'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_tide),
+                            'Suffix' => array('default' => ' m','merge' =>''), 
+                            'Merge with' => array("","")
+                            )
 );
+
 
 
 $type['days']['parameter']  = array(
@@ -377,21 +459,23 @@ $type['days']['parameter']  = array(
                               'Suffix' => array('default' => '','merge' =>''), 
                               'Merge with' => array("","")
                               ),
-            'air_temp_high' => array(
-                              'German' => 'Temp.Max',
-                              'English' => 'Temp.Max',
-                              'Active' => false,
-                              'Suffix' => array('default' =>  ' °C','merge' =>' °C'),   
-                              'Merge with' => array("","")
-                              ),
-            'air_temp_low' => array(
+           'air_temp_low' => array(
                               'German' => 'Temp. Min/Max',
                               'English' => 'T.Min-Max',
                               'Active' => true,
-                              'Suffix' => array('default' =>  '','merge' =>' °C'),   
-                              'Merge with' => array('air_temp_high',"")
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_air_temp_low),
+                              'Suffix' => array('default' => ' °C','merge' =>' °C'),   
+                              'Merge with' => array("","")
                               ),
-           'precip_icon' => array(
+            'air_temp_high' => array(
+                              'German' => 'Temp.Max',
+                              'English' => 'Temp.Max',
+                              'Active' => true,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_air_temp_high),
+                              'Suffix' => array('default' =>  ' °C','merge' =>' °C'),   
+                              'Merge with' => array("","")
+                              ),
+            'precip_icon' => array(
                               'German' => '',
                               'English' => '',
                               'Active' => false,
@@ -402,6 +486,7 @@ $type['days']['parameter']  = array(
                               'German' => 'Niederschlags Art',
                               'English' => 'Precip',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> 'precip_probability', "intensity" => "ee","gradient" => $gradient_precip_type),                           
                               'Suffix' => array('default' => ' ','merge' =>' %'), 
                               'Merge with' => array("precip_probability","")
                               ),
@@ -463,6 +548,7 @@ $type['now']['parameter']  = array(
                               'German' => 'Temp Gefühlt/Gemessen',
                               'English' => 'TF / TA',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> 'feels_like', "intensity" => "ee","gradient" => $gradient_feels_like),      
                               'Suffix' => array('default' =>  ' ','merge' =>''),
                               'Merge with' => array("air_temperature","")
                               ), 
@@ -516,6 +602,7 @@ $type['now']['parameter']  = array(
                               'German' => 'Feuchte',
                               'English' => 'Humidity',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_relative_humidity),   
                               'Suffix' => array('default' =>  ' %','merge' =>''),
                               'Merge with' => array("","")
                               ),
@@ -532,11 +619,13 @@ $type['now']['parameter']  = array(
                               'Active' => false,
                               'Suffix' => array('default' => '','merge' =>''), 
                               'Merge with' => array("","")
-                              ), 
+                              ),                          
+  
             'wind_direction_cardinal' => array(
                               'German' => 'Wind Richtung/~/Böe',
                               'English' => 'Di/~/Gust',
                               'Active' => true,
+                              'Color_Gradient' => array("value"=> 'wind_gust', "intensity" => "ee","gradient" => $gradient_wind_gust),   
                               'Suffix' => array('default' => '','merge' =>' km/h'), 
                               'Merge with' => array("wind_avg","wind_gust")
                               ), 
@@ -559,6 +648,7 @@ $type['now']['parameter']  = array(
                               'German' => 'UV',
                               'English' => 'UV',
                               'Active' => false,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_uv),    
                               'Suffix' => array('default' => '','merge' =>' '), 
                               'Merge with' => array("","")
                               ),
@@ -732,6 +822,7 @@ $type['device']['parameter']  = array(
                               'German' => 'UV',
                               'English' => 'UV',
                               'Active' => false,
+                              'Color_Gradient' => array("value"=> '', "intensity" => "ee","gradient" => $gradient_uv),                              
                               'Suffix' => array('default' => '','merge' =>' '), 
                               'Merge with' => array("","")
                               ),
@@ -781,14 +872,13 @@ $type['device']['parameter']  = array(
 );
 
 
-
-
 //------------------------------ Ab hier bitte nichts mehr verändern ----------------------------------------------------
 
 $icons = NULL;
 static_data($default_icons,$variable_types,$condition_icons,$icons);
 $type = configuration_back_up_handler($configuration_back_up_command,$config_name,$type);
 if($type === false) return;
+
 
 
 
@@ -804,7 +894,8 @@ $token = check_secret($token,'Token');
 $Station_ID = check_secret($Station_ID,'Station ID');
 if(!$token or !$Station_ID) return;
 $array = get_data($Station_ID,$token);
-$array_device =  get_device_data();
+if(!is_array($array)) return;
+$array_device =  get_device_data($time_zone_correction);
 
 
 //-----------------------------------------------------Abspeichern des gesamten Tempest Datensatzes --------------------
@@ -838,162 +929,13 @@ foreach($type as $key => $value) // hours, days, now, device
 }
 
 
-function configuration_back_up_handler($configuration_back_up_command,$config_name,$configuration)
-{
-      Global $variable_types;
-      $set1 = ['Use','List',"Detail",'Compare',"Delete","Migrate"];
-      if($configuration_back_up_command == 'Save' and $config_name != '')
-      {
-            $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
-            $config_data = json_decode(IPS_GetScriptContent($script_id),true);
-            if(is_array($config_data))
-            { 
-            }
-            else
-            {
-                  $config_data = NULL;
-            }
-            $config_data[$config_name] = $configuration;
-            IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
-            echo "Configuration ".$config_name." stored ";
-            return $configuration;
-
-      }
-      elseif($configuration_back_up_command == 'Migrate')
-      {
-            $ID = manage_variable(false,$_IPS['SELF'],'Configurations',$variable_types['String'],'~TextBox','0',false,true);
-            if (GetValueString($ID) != '')
-            {
-                  $config_data = unserialize(GetValueString($ID));
-                  if(is_array($config_data))
-                  {
-                        $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
-                        IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
-                        echo " Data from the serialized Variable stored in the Configuration Skript ";
-                        return $configuration;
-                  }
-                  else
-                  {
-                        echo " No Array in Serialized Variable found ";
-                        return false;
-                  }
-            }
-            else
-            {
-                  echo " No Data in Serialized Variable found ";
-                  return false;
-            }
-      }
-      elseif(in_array($configuration_back_up_command,$set1))
-      {
-            $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
-            $config_data = json_decode(IPS_GetScriptContent($script_id),true);
-            if(is_array($config_data))
-            { 
-                  if($configuration_back_up_command == 'List')
-                  {  
-                        echo "The following Configurations are stored : \n";
-                        foreach($config_data as $key => $value)
-                        {
-                              echo $key."\n"; 
-                        }
-                        return false;
-                  }
-                  else
-                  {
-                        if(array_key_exists($config_name,$config_data))
-                        {
-                              if ($configuration_back_up_command == 'Detail')
-                              {   
-                                    echo "Configuration ".$config_name." has the following details : \n";
-                                    print_r($config_data[$config_name]);
-                                    return false;
-                              }
-                              elseif($configuration_back_up_command =='Compare')
-                              {
-                                    echo "Difference between Skript Configuration and ".$config_name." : \n";
-                                    check($configuration,$config_data[$config_name]);
-                                    return false;
-                              }
-                              elseif($configuration_back_up_command == 'Use')
-                              {     echo "Backup Configuration ".$config_name." Used \n";
-                                    return  $config_data[$config_name];                                  
-                              }
-                              elseif($configuration_back_up_command == 'Delete')
-                              { 
-                                    $ID = get_script_id($_IPS['SELF'],'Configurations'); 
-                                    $config_data = json_decode(IPS_GetScriptContent($script_id),true);
-                                    if (is_array($config_data))
-                                    {
-                                          echo "Backup Configuration ".$config_name." deleted \n";
-                                          if(array_key_exists($config_name,$config_data))
-                                          { 
-                                                unset($config_data[$config_name]);   
-                                                IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
-                                          }
-                                          else
-                                          {
-                                                echo "Backup Configuration ".$config_name." not found \n";  
-                                          }
-                                          }
-                                    else
-                                    {
-                                          echo "Backup Configuration ".$config_name." not found \n";
-                                    }
-                                    return false;                              
-                              }
- 
-  
-                              else
-                              {
-                                    echo " Option ".$configuration_back_up_command." not available \n";
-                                    return false;
-                              }
-                        }
-                        else
-                        {
-                             echo " No Configuration stored Yet  \n";
-                             return false;
-                        }
-                  }
-            }
-            else
-            {
-                  echo " No Configuration stored Yet  \n";
-                  return false;
-                 
-            }
-                    
-      }
-      elseif($configuration_back_up_command == '')
-      {
-            echo " Program executed using existing Configuration \n";
-            return $configuration;
-      }
-      else
-      {
-            if($config_name == '')
-            {
-                  echo " Name empty Configuration not Stored \n ";  
-                  return false;   
-            }
-            else
-            {
-                  echo " Option ".$configuration_back_up_command." not available \n";
-                  return false;
-            }
-
-      }
-}
-
-
 
 
 
 
 function build_html_page($var_name,$type, $array, $nr_of_forecasts, $intervall,$selector,$width,$przt,$border,$border_size,$border_color,$fontSize,$text_align,$table_layout,$language,$icon_width,$icon_height,$parameter,$label_background,$column_background,$font_size_scale_type)
 { 
-      Global $variable_types;
+      Global $variable_types,$all_values;
       //--------------------------------Aufbereitung der Rohdaten für die Stundenvorhersage-----------------------------------
       if ($type == 'hourly' or $type == 'daily') 
       {
@@ -1006,6 +948,7 @@ function build_html_page($var_name,$type, $array, $nr_of_forecasts, $intervall,$
       elseif ($type == 'device')
       {
            $condition = $array; 
+
       }
       else
       {
@@ -1017,11 +960,20 @@ function build_html_page($var_name,$type, $array, $nr_of_forecasts, $intervall,$
 
       //---------------------------------Tabelle wird generiert---------------------------------------------------------------
 
+
+      foreach($condition as $key_n => $value_n)
+      {
+          foreach($value_n as $key_k => $value_k)
+          { 
+              $all_values[$type][$key_k][] =  $value_k;
+          }
+      }   
+
       foreach($parameter as $key => $value)
       {     
             if($value['Active'])
             { 
-                  $content = build_content($content,$value[$language],$condition,$key,$value['Suffix'],$value['Merge with'],$icon_width,$icon_height,$parameter,$language,$label_background,$column_background);
+                 $content = build_content($type,$content,$value[$language],$condition,$key,$value['Suffix'],$value['Merge with'],$icon_width,$icon_height,$parameter,$language,$label_background,$column_background);
             } 
       }
       $content .= '</table>';
@@ -1031,33 +983,17 @@ function build_html_page($var_name,$type, $array, $nr_of_forecasts, $intervall,$
       // ------------------------------------Ende der Stunden Vorhersage----------------------------------------------
 }
 
-function check_secret($data,$type)
-{     Global $variable_types;
-      if($data == "")
-      {
-            $ID = manage_variable(false,$_IPS['SELF'],$type,$variable_types['String'],'~TextBox','0',false,true);      
-            $data = GetValueString($ID);
-            if($data == '')
-            {
-                  echo $type." fehlt und ist auch nicht gespeichert. Bitte mindestens einmal eingeben";
-                  return false;
-            }
-            return $data;
-      }
-      $ID = manage_variable(false,$_IPS['SELF'],$type,$variable_types['String'],'~TextBox','0',false,true);
-      SetValueString($ID,$data);
-      return $data;
-}
 
-function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$icon_width,$icon_height,$parameter,$language,$label_background,$column_background)
+function build_content ($type,$content,$label_text,$condition,$field,$suffix,$merge,$icon_width,$icon_height,$parameter,$language,$label_background,$column_background)
 { 
-      Global $label_text_color,$condition_icons,$path,$icon_type,$column_text_color,$icons,$default_icons,$data_divider,$array;
+      Global $label_text_color,$condition_icons,$path,$icon_type,$column_text_color,$icons,$default_icons,$data_divider,$array,$green,$light_green,$light_blue,$violet,$blood_orange,$fire,$blue,$blue1,$red1,$red,$green1,$yellow1,$orange,$alpha,$tide_min,$tide_max,$time_zone_correction,$all_values ;
       $content .= '<tr>'; //add
       $content .= $label_background.$label_text_color.$label_text.'</td>'; //add </td>
       $nr = 0;
- 
+
       foreach($condition as $key => $value)
       { 
+        
             if($field === 'local_day')
             { 
 
@@ -1097,24 +1033,24 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
             }
             elseif($field === 'sunrise')
             {
-                  $content .= $column_background.$column_text_color.date("H:i",$value['sunrise']).' - '.date("H:i",$value['sunset']);    
+                  $content .= $column_background.$column_text_color.date("H:i",($value['sunrise']-$time_zone_correction)).' - '.date("H:i",($value['sunset']-$time_zone_correction));    
             }
             elseif($field === 'time')
-            {
-                  $content .= $label_background.$label_text_color.date("H:i",$key).$suffix['default']; 
+            { 
+                  $content .= $label_background.$label_text_color.date("H:i",($key-$time_zone_correction)).$suffix['default']; 
             }
             else
             { 
                   if(array_key_exists($field,$value))
                   { 
-                        $data = translations(strval($value[$field])).$suffix['default'];
+                        $data = translations(strval($value[$field]),$language).$suffix['default'];
                         foreach($merge as $key1 => $value1) 
                         {      
                               if($value1 != '')
                               {
                                     if(array_key_exists($value1,$value))
                                     { 
-                                          $data .= $data_divider.translations($value[$value1]).$parameter[$value1]['Suffix']['merge'];
+                                          $data .= $data_divider.translations($value[$value1],$language).$parameter[$value1]['Suffix']['merge'];
                                     }
                                     else
                                     {
@@ -1125,7 +1061,46 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
                               {                              
                               } 
                         }
-                        $content .= $column_background.$column_text_color.$data;  
+
+                        if(array_key_exists('Color_Gradient',$parameter[$field]))
+                        { 
+                            
+                            $intensity = $parameter[$field]['Color_Gradient']["intensity"];
+                            $gradient_array = $parameter[$field]['Color_Gradient']["gradient"];
+                            if($gradient_array[0]  != '') 
+                            { 
+                              if($parameter[$field]['Color_Gradient']["value"] === "")
+                              {   
+                                    $min_value = min($all_values[$type][$field]);
+                                    $max_value = max($all_values[$type][$field]);
+                                    $value_used_for_color = $value[$field];
+                              }
+                              else // Für den Fall das in einer Zeile mehere Daten dargestellt werden
+                              {
+                                    $min_value = min($all_values[$type][$parameter[$field]['Color_Gradient']["value"]]);
+                                    $max_value = max($all_values[$type][$parameter[$field]['Color_Gradient']["value"]]);
+                                    $value_used_for_color = $value[$parameter[$field]['Color_Gradient']["value"]];
+                              }
+                              $color = numberToColor($value_used_for_color ,$min_value ,$max_value,$gradient_array);
+                              $label = '<td style="background-color: '.$color.$intensity.'" colspan="1" '."nowrap".'>';
+                              if($parameter[$field]['Merge with'] === "")
+                              {
+                                    $content .= $label.$label_text_color.$value[$field].$suffix['default']; 
+                              }                              
+                              else
+                              {
+                                    $content .= $label.$label_text_color.$data; 
+                              }
+                            }
+                            else
+                            {
+                                $content .= $column_background.$column_text_color.$data;  
+                            }
+                        }   
+                        else
+                        {
+                            $content .= $column_background.$column_text_color.$data;
+                        }  
                   }
                   else
                   {
@@ -1139,6 +1114,10 @@ function build_content ($content,$label_text,$condition,$field,$suffix,$merge,$i
       return $content;
 }
 
+
+
+
+
 function format_content($table_type,$width,$przt,$border,$border_size,$border_color,$fontSize,$text_align,$table_layout,$font_size_scale_type) //add Table Type
 { 
       $content = "<meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>"; 
@@ -1149,6 +1128,7 @@ function format_content($table_type,$width,$przt,$border,$border_size,$border_co
 
 function get_detailed_data($field,$array,$nr_of_forecasts,$intervall,$index)
 { 
+global $tide,$time_zone_correction;
 
       $key = 0;
       $nr = 0;
@@ -1159,6 +1139,18 @@ function get_detailed_data($field,$array,$nr_of_forecasts,$intervall,$index)
             foreach($value as $key1 => $value1)
             {
                   $condition[$value[$index]][$key1] =  $value1;
+            }
+           if(array_key_exists("time",$condition[$value[$index]]))
+            {
+                $adjusted_time =  $value[$index] - $time_zone_correction;
+                if(is_array($tide))
+                { 
+                  $condition[$value[$index]]["TIDE"] = $tide[$adjusted_time];
+                }
+                else
+                {
+                    $condition[$value[$index]]["TIDE"] = 0;  
+                }
             }
             $key = $key + $intervall;
             $nr++;
@@ -1178,70 +1170,77 @@ function get_station_data($array,$index)
       return $condition;
 }
 
-function translations($translate_to)
+function translations($translate_to,$language)
 {
-Global $German;
-     $translate_to = strval($translate_to);
-      $translations = Array(
-      'Date' =>'Datum',
-      'Temp.' => 'Temperatur',
-      'Feels Like' => 'Gefühlt wie',
-      'Type' => 'Art',
-      'Chance' => 'Wahr-scheinlich',
-      'Humidity' => 'Feuchte',
-      'Gust km/h' => 'Böe km/h',
-      'Direction' => 'Richtung',
-      'Hour' => 'Stunde',
-      'Clear' => 'Klar',
-      'Partly Cloudy' => 'Teilweise wolkig',
-      'Cloudy' => 'Bedeckt',
-      'Rain Likely' => 'Bedeckt mit Regen',
-      'Rain Possible' => 'Regen möglich',
-      'Wintry Mix Likely' => 'Bedeckt mit Schneeregen',
-      'Wintry Mix Possible' => 'Schneeregen möglich',
-      'Snow Likely' => 'Bedeckt mit Schnee',
-      'Snow Possible' => 'Schnee möglich',
-      'rain' => 'Regen',
-      'sleet' => 'Schneeregen',
-      'snow' => 'Schnee',
-      'thunderstorm' => 'Gewitter',
-      'windy' => 'windig',
-      'Day' => 'Tag',
-      'Daily' => 'Täglich',
-      'T High' => 'T max',
-      'T Low' => 'T min',
-      'Precip' => 'Niederschlag',
-      'Precip %' => 'Niedersch. %',
-      'Condition' => 'Wetterlage',
-      'Daylight' => 'Sonnenauf-/ untergang',
-      ' to ' => ' bis ',
-      'rising' => 'Steigend',       
-      'falling' => 'Fallend',
-      'steady' => 'Gleich',
-      'unknown' => 'Unbekannt',
-      'NNE' => 'NNO',
-      'NE' => 'NO',
-      'ENE' => 'ONO',
-      'E' => 'O',
-      'ESE' => 'OSO',
-      'SE' => 'SO',
-      'SSE' => 'SSO',
-      'Very Light Rain' => 'Sehr leichter Regen',
-      'Light Rain' => 'Leichter Regen',
-      'Moderate Rain' => 'Mäßiger Regen',
-      'Heavy Rain' => 'Starkregen',
-      'None' => 'Kein Niederschlag',
-      'Rain' => 'Es Regnet',
-      'Hail' => 'Es Hagelt'  
+      if($language == "German")
+      { 
+        $translate_to = strval($translate_to);
+        
+        $translations = Array(
+        'Date' =>'Datum',
+        'Temp.' => 'Temperatur',
+        'Feels Like' => 'Gefühlt wie',
+        'Type' => 'Art',
+        'Chance' => 'Wahr-scheinlich',
+        'Humidity' => 'Feuchte',
+        'Gust km/h' => 'Böe km/h',
+        'Direction' => 'Richtung',
+        'Hour' => 'Stunde',
+        'Clear' => 'Klar',
+        'Partly Cloudy' => 'Teilweise wolkig',
+        'Cloudy' => 'Bedeckt',
+        'Rain Likely' => 'Bedeckt mit Regen',
+        'Rain Possible' => 'Regen möglich',
+        'Wintry Mix Likely' => 'Bedeckt mit Schneeregen',
+        'Wintry Mix Possible' => 'Schneeregen möglich',
+        'Snow Likely' => 'Bedeckt mit Schnee',
+        'Snow Possible' => 'Schnee möglich',
+        'rain' => 'Regen',
+        'sleet' => 'Schneeregen',
+        'snow' => 'Schnee',
+        'thunderstorm' => 'Gewitter',
+        'windy' => 'windig',
+        'Day' => 'Tag',
+        'Daily' => 'Täglich',
+        'T High' => 'T max',
+        'T Low' => 'T min',
+        'Precip' => 'Niederschlag',
+        'Precip %' => 'Niedersch. %',
+        'Condition' => 'Wetterlage',
+        'Daylight' => 'Sonnenauf-/ untergang',
+        ' to ' => ' bis ',
+        'rising' => 'Steigend',       
+        'falling' => 'Fallend',
+        'steady' => 'Gleich',
+        'unknown' => 'Unbekannt',
+        'NNE' => 'NNO',
+        'NE' => 'NO',
+        'ENE' => 'ONO',
+        'E' => 'O',
+        'ESE' => 'OSO',
+        'SE' => 'SO',
+        'SSE' => 'SSO',
+        'Very Light Rain' => 'Sehr leichter Regen',
+        'Light Rain' => 'Leichter Regen',
+        'Moderate Rain' => 'Mäßiger Regen',
+        'Heavy Rain' => 'Starkregen',
+        'None' => 'Kein Niederschlag',
+        'Rain' => 'Es Regnet',
+        'Hail' => 'Es Hagelt'  
 
-      );
+        );
 
-      if(array_key_exists($translate_to, $translations))
-      {
-            return $translations[$translate_to];
+        if(array_key_exists($translate_to, $translations))
+        {
+                return $translations[$translate_to];
+        }
+        else
+        {
+            return $translate_to;
+        }
       }
       else
-      {
+      { 
             return $translate_to;
       }
  
@@ -1302,7 +1301,7 @@ function static_data($default_icons,&$variable_types,&$condition_icons,&$icons)
 
 }
 
-function static_data_del($default_icons,&$variable_types,&$condition_icons,&$icons)
+function static_data_animated($default_icons,&$variable_types,&$condition_icons,&$icons)
 { 
       Global $path,$icon_type,$icons_neu;
       $variable_types = [
@@ -1315,31 +1314,32 @@ function static_data_del($default_icons,&$variable_types,&$condition_icons,&$ico
 
       if($default_icons)
       { 
+ 
             $condition_icons = array(
 
-            'clear-day' => '01d',
-            'clear-night' => '01n',
-            'cloudy' => '04',
-            'foggy' => '15',
-            'partly-cloudy-day' => '02d',
-            'partly-cloudy-night' => '02n',
-            'possibly-rainy-day' => '40d',
-            'possibly-rainy-night' => '40n',
-            'possibly-sleet-day' => '43d',
-            'possibly-sleet-night' => '43n',
-            'possibly-snow-day' => '45d',
-            'possibly-snow-night' => '45n',
-            'possibly-thunderstorm-day' => '24d',
-            'possibly-thunderstorm-night' => '24n',
-            'rainy' => '46',
-            'sleet' => '48',
-            'snow' => '50',
-            'thunderstorm' => '30',
-            'windy' => '10'
+            'clear-day' => 'day',
+            'clear-night' => 'night',
+            'cloudy' => 'cloudy',
+            'foggy' => 'mist',
+            'partly-cloudy-day' => 'partly-cloudy-day',
+            'partly-cloudy-night' => 'partly-cloudy-night',
+            'possibly-rainy-day' => 'rainy-2',
+            'possibly-rainy-night' => 'partly-cloudy-night-rain',
+            'possibly-sleet-day' => 'partly-cloudy-day-hail',
+            'possibly-sleet-night' => 'partly-cloudy-night-hail',
+            'possibly-snow-day' => 'snowy-3',
+            'possibly-snow-night' => 'partly-cloudy-night-snow',
+            'possibly-thunderstorm-day' => 'thunder',
+            'possibly-thunderstorm-night' => 'thunder',
+            'rainy' => 'rain',
+            'sleet' => 'hail',
+            'snow' => 'snow',
+            'thunderstorm' => 'thunder',
+            'windy' => 'wind'
 
             );
 
-            $local_path = "";//IPS_GetKernelDir() ."webfront\\user\\icons\\";
+            $local_path = IPS_GetKernelDir() ."webfront\\user\\animated\\";
             
             foreach($condition_icons as $key => $value)
             {
@@ -1380,27 +1380,37 @@ function get_data($Station_ID,$token)
 
       $forecast = json_decode ($resp);
       $array = json_decode(json_encode($forecast), true);
-      if(array_key_exists('lightning_strike_last_epoch',$array['current_conditions']))
+      if(is_array($array))
       {
-            $array['current_conditions']['lightning_strike_last_epoch'] = $array['current_conditions']['lightning_strike_last_epoch'] ;
-            if($time_lapsed)
+
+            //print_r($array);
+            if(array_key_exists('lightning_strike_last_epoch',$array['current_conditions']))
             {
-                  $array['current_conditions']['lightning_strike_last_epoch'] =  timeEllapsedFrom($array['current_conditions']['lightning_strike_last_epoch']);
+                  $array['current_conditions']['lightning_strike_last_epoch'] = $array['current_conditions']['lightning_strike_last_epoch'] ;
+                  if($time_lapsed)
+                  {
+                        $array['current_conditions']['lightning_strike_last_epoch'] =  timeEllapsedFrom($array['current_conditions']['lightning_strike_last_epoch']);
+                  }
+                  else
+                  {
+                        $array['current_conditions']['lightning_strike_last_epoch'] = date("d-m-Y H:i:s",$array['current_conditions']['lightning_strike_last_epoch']);
+                  }
             }
             else
             {
-                  $array['current_conditions']['lightning_strike_last_epoch'] = date("d-m-Y H:i:s",$array['current_conditions']['lightning_strike_last_epoch']);
+                  $array['current_conditions']['lightning_strike_last_epoch'] = 0;
             }
+            //print_r($array);
+            return $array;
       }
       else
       {
-            $array['current_conditions']['lightning_strike_last_epoch'] = 0;
+            return false;      
       }
-      return $array;
 }
 
 
-function get_device_data()
+function get_device_data($time_zone_correction)
 {
       $array = NULL;
       $niederschlags_typen = [0 => "None", 1 => "Rain", 2 => "Hail"];
@@ -1418,7 +1428,7 @@ function get_device_data()
       }
       if(is_array($array))
       {
-            $array[0][0] = date("H:i",$array[0][0]);
+            $array[0][0] = date("H:i",$array[0][0]-$time_zone_correction);
             $array[0][4] = direction_to_text($array[0][4]);
             $array[0][13] = $niederschlags_typen[$array[0][13]];
             $array[0][6] = number_format(floatval($array[0][6]),2,",","."); 
@@ -1650,3 +1660,267 @@ function check($array1,$array2)
             }
       }
 }
+function numberToColor($value, $min, $max, $gradientColors = null)
+{
+    // Ensure value is in range
+    if ($value < $min) {
+        $value = $min;
+    }
+    if ($value > $max) {
+        $value = $max;
+    }
+
+    // Normalize min-max range to [0, positive_value]
+    $max -= $min;
+    $value -= $min;
+    $min = 0;
+    if($max == 0) $max = 1;
+    // Calculate distance from min to max in [0,1]
+    $distFromMin = $value / $max;
+
+    // Define start and end color
+    if (count($gradientColors) == 0) {
+        return numberToColor($value, $min, $max, ['#CC0000', '#EEEE00', '#00FF00']);
+    } else if (count($gradientColors) == 2) {
+        $startColor = $gradientColors[0];
+        $endColor = $gradientColors[1];
+    } else if (count($gradientColors) > 2) {
+        $startColor = $gradientColors[floor($distFromMin * (count($gradientColors) - 1))];
+        $endColor = $gradientColors[ceil($distFromMin * (count($gradientColors) - 1))];
+
+        $distFromMin *= count($gradientColors) - 1;
+        while ($distFromMin > 1) {
+            $distFromMin--;
+        }
+    } else {
+        die("Please pass more than one color or null to use default red-green colors.");
+    }
+
+    // Remove hex from string
+    if ($startColor[0] === '#') {
+        $startColor = substr($startColor, 1);
+    }
+    if ($endColor[0] === '#') {
+        $endColor = substr($endColor, 1);
+    }
+
+    // Parse hex
+    list($ra, $ga, $ba) = sscanf("#$startColor", "#%02x%02x%02x");
+    list($rz, $gz, $bz) = sscanf("#$endColor", "#%02x%02x%02x");
+
+    // Get rgb based on
+    $distFromMin = $distFromMin;
+    $distDiff = 1 - $distFromMin;
+    $r = intval(($rz * $distFromMin) + ($ra * $distDiff));
+    $r = min(max(0, $r), 255);
+    $g = intval(($gz * $distFromMin) + ($ga * $distDiff));
+    $g = min(max(0, $g), 255);
+    $b = intval(($bz * $distFromMin) + ($ba * $distDiff));
+    $b = min(max(0, $b), 255);
+
+    // Convert rgb back to hex
+    $rgbColorAsHex = '#' .
+        str_pad(dechex($r), 2, "0", STR_PAD_LEFT) .
+        str_pad(dechex($g), 2, "0", STR_PAD_LEFT) .
+        str_pad(dechex($b), 2, "0", STR_PAD_LEFT);
+
+    return $rgbColorAsHex;
+}
+function get_tide_data($station_id,$nr_of_hours)
+{ 
+    global $time_zone_correction;
+    if ($station_id === 0) return $station_id;
+    $tide_data_var_id  = manage_variable(false,$_IPS['SELF'],'Tide',3,'~TextBox','0',false,true);
+    $tide = unserialize(GetValueString($tide_data_var_id ));
+
+    if(is_array($tide))
+    {
+        if(date("Ymd",array_key_first($tide)) === date("Ymd"))
+        {
+            //return $tide;
+        }
+    }
+    $start_date = date("Ymd H:m",time());
+    $end_date   = date("Ymd H:m",time()+($nr_of_hours*60*60));
+    $range = "";
+    $product = "predictions";
+    $time_zone = "lst_ldt";
+    $tidedata = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?begin_date=".$start_date."&end_date=".$end_date."&station=".$station_id."&product=".$product."&datum=mllw&units=metric&time_zone=".$time_zone."&application=web_services&format=xml&interval=60";
+    $xml = simplexml_load_file($tidedata);
+    $json = json_encode($xml);
+    $array = json_decode($json,TRUE);
+    foreach($array['pr'] as $key => $value)
+    {
+        $tide[strtotime($value['@attributes']['t'])] = $value['@attributes']['v'];
+    }
+    SetValueString($tide_data_var_id, serialize($tide));
+    return $tide;
+    
+}
+
+function configuration_back_up_handler($configuration_back_up_command,$config_name,$configuration)
+{
+      Global $variable_types;
+      $set1 = ['Use','List',"Detail",'Compare',"Delete","Migrate"];
+      if($configuration_back_up_command == 'Save' and $config_name != '')
+      {
+            $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
+            $config_data = json_decode(IPS_GetScriptContent($script_id),true);
+            if(is_array($config_data))
+            { 
+            }
+            else
+            {
+                  $config_data = NULL;
+            }
+            $config_data[$config_name] = $configuration;
+            IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+            echo "Configuration ".$config_name." stored ";
+            return $configuration;
+
+      }
+      elseif($configuration_back_up_command == 'Migrate')
+      {
+            $ID = manage_variable(false,$_IPS['SELF'],'Configurations',$variable_types['String'],'~TextBox','0',false,true);
+            if (GetValueString($ID) != '')
+            {
+                  $config_data = unserialize(GetValueString($ID));
+                  if(is_array($config_data))
+                  {
+                        $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
+                        IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+                        echo " Data from the serialized Variable stored in the Configuration Skript ";
+                        return $configuration;
+                  }
+                  else
+                  {
+                        echo " No Array in Serialized Variable found ";
+                        return false;
+                  }
+            }
+            else
+            {
+                  echo " No Data in Serialized Variable found ";
+                  return false;
+            }
+      }
+      elseif(in_array($configuration_back_up_command,$set1))
+      {
+            $script_id = get_script_id($_IPS['SELF'],'Configurations'); 
+            $config_data = json_decode(IPS_GetScriptContent($script_id),true);
+            if(is_array($config_data))
+            { 
+                  if($configuration_back_up_command == 'List')
+                  {  
+                        echo "The following Configurations are stored : \n";
+                        foreach($config_data as $key => $value)
+                        {
+                              echo $key."\n"; 
+                        }
+                        return false;
+                  }
+                  else
+                  {
+                        if(array_key_exists($config_name,$config_data))
+                        {
+                              if ($configuration_back_up_command == 'Detail')
+                              {   
+                                    echo "Configuration ".$config_name." has the following details : \n";
+                                    print_r($config_data[$config_name]);
+                                    return false;
+                              }
+                              elseif($configuration_back_up_command =='Compare')
+                              {
+                                    echo "Difference between Skript Configuration and ".$config_name." : \n";
+                                    check($configuration,$config_data[$config_name]);
+                                    return false;
+                              }
+                              elseif($configuration_back_up_command == 'Use')
+                              {     echo "Backup Configuration ".$config_name." Used \n";
+                                    return  $config_data[$config_name];                                  
+                              }
+                              elseif($configuration_back_up_command == 'Delete')
+                              { 
+                                    $ID = get_script_id($_IPS['SELF'],'Configurations'); 
+                                    $config_data = json_decode(IPS_GetScriptContent($script_id),true);
+                                    if (is_array($config_data))
+                                    {
+                                          echo "Backup Configuration ".$config_name." deleted \n";
+                                          if(array_key_exists($config_name,$config_data))
+                                          { 
+                                                unset($config_data[$config_name]);   
+                                                IPS_SetScriptContent ($script_id, json_encode($config_data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));
+                                          }
+                                          else
+                                          {
+                                                echo "Backup Configuration ".$config_name." not found \n";  
+                                          }
+                                          }
+                                    else
+                                    {
+                                          echo "Backup Configuration ".$config_name." not found \n";
+                                    }
+                                    return false;                              
+                              }
+ 
+  
+                              else
+                              {
+                                    echo " Option ".$configuration_back_up_command." not available \n";
+                                    return false;
+                              }
+                        }
+                        else
+                        {
+                             echo " No Configuration stored Yet  \n";
+                             return false;
+                        }
+                  }
+            }
+            else
+            {
+                  echo " No Configuration stored Yet  \n";
+                  return false;
+                 
+            }
+                    
+      }
+      elseif($configuration_back_up_command == '')
+      {
+            echo " Program executed using existing Configuration \n";
+            return $configuration;
+      }
+      else
+      {
+            if($config_name == '')
+            {
+                  echo " Name empty Configuration not Stored \n ";  
+                  return false;   
+            }
+            else
+            {
+                  echo " Option ".$configuration_back_up_command." not available \n";
+                  return false;
+            }
+
+      }
+}
+
+function check_secret($data,$type)
+{     Global $variable_types;
+      if($data == "")
+      {
+            $ID = manage_variable(false,$_IPS['SELF'],$type,$variable_types['String'],'~TextBox','0',false,true);      
+            $data = GetValueString($ID);
+            if($data == '')
+            {
+                  echo $type." fehlt und ist auch nicht gespeichert. Bitte mindestens einmal eingeben";
+                  return false;
+            }
+            return $data;
+      }
+      $ID = manage_variable(false,$_IPS['SELF'],$type,$variable_types['String'],'~TextBox','0',false,true);
+      SetValueString($ID,$data);
+      return $data;
+}
+
